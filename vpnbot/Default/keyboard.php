@@ -34,7 +34,8 @@ $stmt->bindParam(':agent', $userbot['agent']);
 $stmt->execute();
 $hasAvailableTestPanel = false;
 while ($result = $stmt->fetch(PDO::FETCH_ASSOC)) {
-    if ($result['hide_user'] != null && in_array($from_id, json_decode($result['hide_user'], true))) {
+    $hiddenUsers = json_decode($result['hide_user'] ?? '[]', true);
+    if (is_array($hiddenUsers) && in_array($from_id, $hiddenUsers)) {
         continue;
     }
     if (is_array($hide_panel) && in_array($result['name_panel'], $hide_panel)) {
@@ -75,8 +76,9 @@ $stmt = $pdo->prepare("SELECT * FROM marzban_panel WHERE TestAccount = 'ONTestAc
 $stmt->execute();
 $list_marzban_panel_usertest = ['inline_keyboard' => []];
 while ($result = $stmt->fetch(PDO::FETCH_ASSOC)) {
-    if ($result['hide_user'] != null and in_array($from_id, json_decode($result['hide_user'], true))) continue;
-    if (in_array($result['name_panel'], $hide_panel)) continue;
+    $hiddenUsers = json_decode($result['hide_user'] ?? '[]', true);
+    if (is_array($hiddenUsers) && in_array($from_id, $hiddenUsers)) continue;
+    if (is_array($hide_panel) && in_array($result['name_panel'], $hide_panel)) continue;
     $list_marzban_panel_usertest['inline_keyboard'][] = [
         ['text' => $result['name_panel'], 'callback_data' => "locationtest_{$result['code_panel']}"]
     ];
@@ -172,8 +174,9 @@ $stmt = $pdo->prepare("SELECT * FROM marzban_panel WHERE status = 'active' AND (
 $stmt->execute();
 $list_marzban_panel_users = ['inline_keyboard' => []];
 while ($result = $stmt->fetch(PDO::FETCH_ASSOC)) {
-    if ($result['hide_user'] != null and in_array($from_id, json_decode($result['hide_user'], true))) continue;
-    if (in_array($result['name_panel'], $hide_panel)) continue;
+    $hiddenUsers = json_decode($result['hide_user'] ?? '[]', true);
+    if (is_array($hiddenUsers) && in_array($from_id, $hiddenUsers)) continue;
+    if (is_array($hide_panel) && in_array($result['name_panel'], $hide_panel)) continue;
     $list_marzban_panel_users['inline_keyboard'][] = [
         ['text' => $result['name_panel'], 'callback_data' => "location_{$result['code_panel']}"]
     ];

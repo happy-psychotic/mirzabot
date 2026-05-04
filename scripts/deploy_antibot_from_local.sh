@@ -26,3 +26,4 @@ rsync -az --delete \
   "$TMP_DIR"/ "$HOST:$APP_DIR"/
 
 ssh "$HOST" "cd '$APP_DIR' && php -l index.php >/dev/null && php -l config.php >/dev/null && echo 'deploy ok: $APP_DIR'"
+ssh "$HOST" "bash '$APP_DIR/scripts/sync_reseller_templates.sh' '$APP_DIR'"
