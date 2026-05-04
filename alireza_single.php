@@ -10,7 +10,7 @@ function get_clinetsalireza($username,$namepanel){
     $curl = curl_init();
 
 curl_setopt_array($curl, array(
-  CURLOPT_URL => $marzban_list_get['url_panel'].'/xui/API/inbounds',
+  CURLOPT_URL => rtrim($marzban_list_get['url_panel'], '/').'/xui/API/inbounds/',
   CURLOPT_RETURNTRANSFER => true,
   CURLOPT_ENCODING => '',
   CURLOPT_MAXREDIRS => 10,
@@ -26,8 +26,16 @@ curl_setopt_array($curl, array(
   CURLOPT_COOKIEFILE => 'cookie.txt',
 ));
 $output = [];
-$response = json_decode(curl_exec($curl),true)['obj'];
-if(!isset($response))return;
+$rawResponse = curl_exec($curl);
+$decoded = json_decode($rawResponse, true);
+$response = is_array($decoded) && isset($decoded['obj']) && is_array($decoded['obj']) ? $decoded['obj'] : [];
+if(empty($response)){
+    curl_close($curl);
+    if (is_file('cookie.txt')) {
+        @unlink('cookie.txt');
+    }
+    return [];
+}
 foreach ($response as $client){
     $clientdata= json_decode($client['settings'],true)['clients'];
     foreach($clientdata as $clinets){
