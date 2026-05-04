@@ -1,0 +1,9 @@
+/error_log
+/log.txt
+/cookie.txt
+/api/log.txt
+/storage/
+/sub/cookie.txt
+/config.php.bak
+/vpnbot/[0-9]*/
+/vpnbot/*_bot/
