@@ -1667,29 +1667,26 @@ $Exception_auto_cart_keyboard = json_encode([
 function keyboard_config($config_split,$id_invoice,$back_active = true){
     global $textbotlang;
     $keyboard_config = ['inline_keyboard' => []];
-    $keyboard_config['inline_keyboard'][] = [
-        ['text' => "⚙️ کانفیگ", 'callback_data' => "none"],
-        ['text' => "✏️نام کانفیگ", 'callback_data' => "none"],
-        ];
     for($i = 0; $i<count($config_split);$i++){
         $config = $config_split[$i];
-        $split_config = explode("://",$config);
-        $type_prtocol = $split_config[0];
-        $split_config = $split_config[1];
-        if(isBase64($split_config)){
-            $split_config = base64_decode($split_config);
+        $split_config = explode("://",$config, 2);
+        $type_prtocol = $split_config[0] ?? '';
+        $split_payload = $split_config[1] ?? $config;
+        if(isBase64($split_payload)){
+            $split_payload = base64_decode($split_payload);
         }
+        $configLabel = $type_prtocol !== '' ? strtoupper($type_prtocol) : 'CONFIG';
         if($type_prtocol == "vmess"){
-            $split_config = json_decode($split_config,true)['ps'];
+            $decodedConfig = json_decode($split_payload,true);
+            $split_payload = $decodedConfig['ps'] ?? $configLabel;
         }elseif($type_prtocol == "ss"){
-            $split_config = $split_config;
-            $split_config = explode("#",$split_config)[1];
+            $split_payload = explode("#",$split_payload,2)[1] ?? $configLabel;
         }else{
-        $split_config = explode("#",$split_config)[1];
+        $split_payload = explode("#",$split_payload,2)[1] ?? $configLabel;
         }
         $keyboard_config['inline_keyboard'][] = [
         ['text' => "دریافت کانفیگ", 'callback_data' => "configget_{$id_invoice}_$i"],
-        ['text' => urldecode($split_config), 'callback_data' => "none"],
+        ['text' => urldecode($split_payload), 'callback_data' => "none"],
         ];
         
     }

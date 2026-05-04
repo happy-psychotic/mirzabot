@@ -1252,8 +1252,7 @@ $textconnect
         ]);
         update("user", "Processing_value", $nameloc['username'], "id", $from_id);
         $subscriptionurl = $DataUserOut['subscription_url'];
-        $randomString = bin2hex(random_bytes(3));
-        $urlimage = "$from_id$randomString.png";
+        $urlimage = runtimeTempPath("sub_qr_{$from_id}", '.png');
         $qrCode = createqrcode($subscriptionurl);
         file_put_contents($urlimage, $qrCode->getString());
         addBackgroundImage($urlimage, $qrCode, 'images.jpg');
@@ -1330,8 +1329,7 @@ $textconnect
     $config = "";
     if ($dataget[2] == "1520") {
         for ($i = 0; $i < count($DataUserOut['links']); ++$i) {
-            $randomString = bin2hex(random_bytes(3));
-            $urlimage = "$from_id$randomString.png";
+            $urlimage = runtimeTempPath("config_qr_{$from_id}_{$i}", '.png');
             $qrCode = createqrcode($DataUserOut['links'][$i]);
             file_put_contents($urlimage, $qrCode->getString());
             addBackgroundImage($urlimage, $qrCode, 'images.jpg');
@@ -1345,8 +1343,7 @@ $textconnect
         }
         return;
     }
-    $randomString = bin2hex(random_bytes(3));
-    $urlimage = "$from_id$randomString.png";
+    $urlimage = runtimeTempPath("config_qr_{$from_id}", '.png');
     $qrCode = createqrcode($DataUserOut['links'][$dataget[2]]);
     file_put_contents($urlimage, $qrCode->getString());
     addBackgroundImage($urlimage, $qrCode, 'images.jpg');

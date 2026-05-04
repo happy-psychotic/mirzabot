@@ -2,9 +2,18 @@
 require_once 'config.php';
 require_once 'request.php';
 ini_set('error_log', 'error_log');
+function getPanelCookieFile($code_panel)
+{
+    static $paths = [];
+    if (!isset($paths[$code_panel])) {
+        $paths[$code_panel] = runtimeTempPath("panel_cookie_{$code_panel}", '.txt');
+    }
+    return $paths[$code_panel];
+}
 function panel_login_cookie($code_panel)
 {
     $panel = select("marzban_panel", "*", "code_panel", $code_panel, "select");
+    $cookieFile = getPanelCookieFile($code_panel);
     $curl = curl_init();
     curl_setopt_array($curl, array(
         CURLOPT_URL => $panel['url_panel'] . '/login',
@@ -16,7 +25,7 @@ function panel_login_cookie($code_panel)
         CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
         CURLOPT_CUSTOMREQUEST => 'POST',
         CURLOPT_POSTFIELDS => "username={$panel['username_panel']}&password=" . urlencode($panel['password_panel']),
-        CURLOPT_COOKIEJAR => 'cookie.txt',
+        CURLOPT_COOKIEJAR => $cookieFile,
     ));
     $response = curl_exec($curl);
     if (curl_error($curl)) {
@@ -31,13 +40,14 @@ function panel_login_cookie($code_panel)
 function login($code_panel, $verify = true)
 {
     $panel = select("marzban_panel", "*", "code_panel", $code_panel, "select");
+    $cookieFile = getPanelCookieFile($code_panel);
     if ($panel['datelogin'] != null && $verify) {
         $date = json_decode($panel['datelogin'], true);
         if (isset($date['time'])) {
             $timecurrent = time();
             $start_date = time() - strtotime($date['time']);
             if ($start_date <= 3000) {
-                file_put_contents('cookie.txt', $date['access_token']);
+                file_put_contents($cookieFile, $date['access_token']);
                 return;
             }
         }
@@ -46,7 +56,7 @@ function login($code_panel, $verify = true)
     $time = date('Y/m/d H:i:s');
     $data = json_encode(array(
         'time' => $time,
-        'access_token' => file_get_contents('cookie.txt')
+        'access_token' => file_get_contents($cookieFile)
     ));
     update("marzban_panel", "datelogin", $data, 'name_panel', $panel['name_panel']);
     if (!is_string($response))
@@ -58,6 +68,7 @@ function get_clinets($username, $namepanel)
 {
     $marzban_list_get = select("marzban_panel", "*", "name_panel", $namepanel, "select");
     login($marzban_list_get['code_panel']);
+    $cookieFile = getPanelCookieFile($marzban_list_get['code_panel']);
     $url = $marzban_list_get['url_panel'] . "/panel/api/inbounds/getClientTraffics/$username";
     $headers = array(
         'Accept: application/json',
@@ -65,7 +76,7 @@ function get_clinets($username, $namepanel)
     );
     $req = new CurlRequest($url);
     $req->setHeaders($headers);
-    $req->setCookie('cookie.txt');
+    $req->setCookie($cookieFile);
     $response = $req->get();
 
     if (isset($response['body'])) {
@@ -81,8 +92,8 @@ function get_clinets($username, $namepanel)
         error_log(json_encode($response));
     }
 
-    if (is_file('cookie.txt')) {
-        @unlink('cookie.txt');
+    if (is_file($cookieFile)) {
+        @unlink($cookieFile);
     }
 
     return $response;
@@ -91,6 +102,7 @@ function addClient($namepanel, $usernameac, $Expire, $Total, $Uuid, $Flow, $subi
 {
     $marzban_list_get = select("marzban_panel", "*", "name_panel", $namepanel, "select");
     login($marzban_list_get['code_panel']);
+    $cookieFile = getPanelCookieFile($marzban_list_get['code_panel']);
     if ($name_product == "usertest") {
         if ($marzban_list_get['on_hold_test'] == "1") {
             if ($Expire == 0) {
@@ -148,15 +160,16 @@ function addClient($namepanel, $usernameac, $Expire, $Total, $Uuid, $Flow, $subi
     );
     $req = new CurlRequest($url);
     $req->setHeaders($headers);
-    $req->setCookie('cookie.txt');
+    $req->setCookie($cookieFile);
     $response = $req->post($configpanel);
-    unlink('cookie.txt');
+    @unlink($cookieFile);
     return $response;
 }
 function updateClient($namepanel, $uuid, array $config)
 {
     $marzban_list_get = select("marzban_panel", "*", "name_panel", $namepanel, "select");
     login($marzban_list_get['code_panel']);
+    $cookieFile = getPanelCookieFile($marzban_list_get['code_panel']);
     $configpanel = json_encode($config, true);
     $url = $marzban_list_get['url_panel'] . '/panel/api/inbounds/updateClient/' . $uuid;
     $headers = array(
@@ -165,9 +178,9 @@ function updateClient($namepanel, $uuid, array $config)
     );
     $req = new CurlRequest($url);
     $req->setHeaders($headers);
-    $req->setCookie('cookie.txt');
+    $req->setCookie($cookieFile);
     $response = $req->post($configpanel);
-    unlink('cookie.txt');
+    @unlink($cookieFile);
     return $response;
 }
 function ResetUserDataUsagex_uisin($usernamepanel, $namepanel)
@@ -176,6 +189,7 @@ function ResetUserDataUsagex_uisin($usernamepanel, $namepanel)
     $data_user = json_decode($data_user['body'], true)['obj'];
     $marzban_list_get = select("marzban_panel", "*", "name_panel", $namepanel, "select");
     login($marzban_list_get['code_panel']);
+    $cookieFile = getPanelCookieFile($marzban_list_get['code_panel']);
     $url = $marzban_list_get['url_panel'] . "/panel/api/inbounds/{$data_user['inboundId']}/resetClientTraffic/" . $usernamepanel;
     $headers = array(
         'Accept: application/json',
@@ -183,15 +197,16 @@ function ResetUserDataUsagex_uisin($usernamepanel, $namepanel)
     );
     $req = new CurlRequest($url);
     $req->setHeaders($headers);
-    $req->setCookie('cookie.txt');
+    $req->setCookie($cookieFile);
     $response = $req->post(array());
-    unlink('cookie.txt');
+    @unlink($cookieFile);
     return $response;
 }
 function removeClient($location, $username)
 {
     $marzban_list_get = select("marzban_panel", "*", "name_panel", $location, "select");
     login($marzban_list_get['code_panel']);
+    $cookieFile = getPanelCookieFile($marzban_list_get['code_panel']);
     $url = $marzban_list_get['url_panel'] . "/panel/api/inbounds/{$marzban_list_get['inboundid']}/delClientByEmail/" . $username;
     $headers = array(
         'Accept: application/json',
@@ -199,8 +214,8 @@ function removeClient($location, $username)
     );
     $req = new CurlRequest($url);
     $req->setHeaders($headers);
-    $req->setCookie('cookie.txt');
+    $req->setCookie($cookieFile);
     $response = $req->post(array());
-    unlink('cookie.txt');
+    @unlink($cookieFile);
     return $response;
 }

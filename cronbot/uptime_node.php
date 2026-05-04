@@ -16,8 +16,8 @@ $marzbanlist = select("marzban_panel", "*","type" ,"marzban" ,"fetchAll");
 $inbounds = [];
 foreach($marzbanlist as $location){
 $Getdnodes = Get_Nodes($location['name_panel']);
-if(!empty($nodes['error']))continue;
-if(!empty($nodes['status'])  && $nodes['status'] != 200 )continue;
+if(!empty($Getdnodes['error']))continue;
+if(!empty($Getdnodes['status'])  && $Getdnodes['status'] != 200 )continue;
 $Getdnodes = json_decode($Getdnodes['body'],true);
 if(count($Getdnodes) == 0)return;
 foreach($Getdnodes as $data){
