@@ -3,6 +3,11 @@
 ## Purpose
 This file is the working manual for future agent sessions in this repository. It describes what the project is, how it is structured, what is safe to change, what is runtime data, and how updates should be handled locally and on servers.
 
+## Mandatory Rule
+- Always implement code/config changes on local repository first.
+- Deploy to server only after local change is complete.
+- Do not perform direct server-only edits unless there is an emergency outage and local patch + deploy is impossible.
+
 ## Repository Identity
 - Local repo path: `/home/saeid/Documents/AntiBan`
 - Fork remote: `origin = git@github-happy:happy-psychotic/mirzabot.git`

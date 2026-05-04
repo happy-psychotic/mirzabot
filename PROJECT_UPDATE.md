@@ -3,6 +3,11 @@
 ## Purpose
 This document defines the update and deployment workflow for this repository.
 
+## Mandatory Rule
+- Every change starts on local repository.
+- Server must receive changes only via deploy from local.
+- Avoid direct server edits except emergency recovery when local-first flow is impossible.
+
 The important constraint is:
 - `antibot` does not reliably have internet access to GitHub
 

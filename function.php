@@ -1546,6 +1546,29 @@ function addBackgroundImage($urlimage, $qrCodeResult, $backgroundPath)
 function checktelegramip()
 {
     $clientIp = $_SERVER['REMOTE_ADDR'] ?? '';
+
+    // When the webhook is behind a reverse proxy/CDN (for example Cloudflare),
+    // REMOTE_ADDR is the proxy IP and not Telegram's source IP.
+    // Prefer trusted forward headers when present.
+    $proxyCandidates = [
+        $_SERVER['HTTP_CF_CONNECTING_IP'] ?? '',
+        $_SERVER['HTTP_X_REAL_IP'] ?? '',
+        $_SERVER['HTTP_X_FORWARDED_FOR'] ?? '',
+    ];
+
+    foreach ($proxyCandidates as $candidate) {
+        if (!is_string($candidate) || trim($candidate) === '') {
+            continue;
+        }
+
+        // X-Forwarded-For may contain a list; first value is the client.
+        $firstIp = trim(explode(',', $candidate)[0]);
+        if (filter_var($firstIp, FILTER_VALIDATE_IP)) {
+            $clientIp = $firstIp;
+            break;
+        }
+    }
+
     if (!is_string($clientIp) || $clientIp === '') {
         return false;
     }
