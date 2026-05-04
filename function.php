@@ -728,10 +728,150 @@ function outputlink($text)
         $error = curl_error($ch);
         return null;
     } else {
-        return $response;
+        return rewriteSubscriptionPayloadHost($response);
     }
 
     curl_close($ch);
+}
+function getConfigHostOverride()
+{
+    static $cachedOverride = null;
+    static $resolved = false;
+
+    if ($resolved) {
+        return $cachedOverride;
+    }
+
+    $resolved = true;
+    $cachedOverride = '185.143.234.235';
+
+    try {
+        global $pdo;
+        if (isset($pdo) && $pdo instanceof PDO) {
+            $stmt = $pdo->query("SELECT config_host_override FROM setting LIMIT 1");
+            if ($stmt !== false) {
+                $value = $stmt->fetchColumn();
+                if (is_string($value) && trim($value) !== '') {
+                    $cachedOverride = trim($value);
+                }
+            }
+        }
+    } catch (Throwable $exception) {
+    }
+
+    return $cachedOverride;
+}
+function rewriteProxyConfigHost($configLine, $overrideHost = null)
+{
+    if (!is_string($configLine)) {
+        return $configLine;
+    }
+
+    $configLine = trim($configLine);
+    if ($configLine === '') {
+        return $configLine;
+    }
+
+    $overrideHost = $overrideHost ?: getConfigHostOverride();
+    if ($overrideHost === '') {
+        return $configLine;
+    }
+
+    if (stripos($configLine, 'vmess://') === 0) {
+        $vmessPayload = substr($configLine, 8);
+        $decodedPayload = base64_decode($vmessPayload, true);
+        if ($decodedPayload !== false) {
+            $vmessConfig = json_decode($decodedPayload, true);
+            if (is_array($vmessConfig)) {
+                if (!empty($vmessConfig['add'])) {
+                    $vmessConfig['add'] = $overrideHost;
+                }
+                if (!empty($vmessConfig['server'])) {
+                    $vmessConfig['server'] = $overrideHost;
+                }
+
+                $encodedPayload = base64_encode(json_encode($vmessConfig, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+                return 'vmess://' . $encodedPayload;
+            }
+        }
+
+        return $configLine;
+    }
+
+    if (preg_match('/^(https?|ftp):\/\//i', $configLine)) {
+        return $configLine;
+    }
+
+    return preg_replace(
+        '/^([a-z][a-z0-9+\-.]*:\/\/)([^@\/?#]+@)?(\[[^\]]+\]|[^:\/?#]+)(:\d+)/i',
+        '${1}${2}' . $overrideHost . '${4}',
+        $configLine,
+        1
+    );
+}
+function normalizeConfigLinks($configs)
+{
+    if (!is_array($configs)) {
+        return $configs;
+    }
+
+    $normalizedConfigs = [];
+    foreach ($configs as $config) {
+        if ($config === null) {
+            continue;
+        }
+
+        if (is_string($config)) {
+            $normalizedConfigs[] = rewriteProxyConfigHost($config);
+        } else {
+            $normalizedConfigs[] = $config;
+        }
+    }
+
+    return $normalizedConfigs;
+}
+function rewriteSubscriptionPayloadHost($payload)
+{
+    if (!is_string($payload) || trim($payload) === '') {
+        return $payload;
+    }
+
+    $trimmedPayload = trim($payload);
+    if (isBase64($trimmedPayload)) {
+        $decodedPayload = base64_decode($trimmedPayload, true);
+        if ($decodedPayload !== false && preg_match('/^[\x09\x0A\x0D\x20-\x7E\x{0080}-\x{FFFF}]+$/u', $decodedPayload)) {
+            return base64_encode(rewriteSubscriptionPayloadHost($decodedPayload));
+        }
+    }
+
+    $lines = preg_split('/\r\n|\r|\n/', $payload);
+    if (!is_array($lines) || count($lines) === 0) {
+        return rewriteProxyConfigHost($payload);
+    }
+
+    $hasConfigLine = false;
+    foreach ($lines as $line) {
+        if (preg_match('/^[a-z][a-z0-9+\-.]*:\/\//i', trim($line))) {
+            $hasConfigLine = true;
+            break;
+        }
+    }
+
+    if (!$hasConfigLine) {
+        return rewriteProxyConfigHost($payload);
+    }
+
+    foreach ($lines as $index => $line) {
+        $trimmedLine = trim($line);
+        if ($trimmedLine === '' || !preg_match('/^[a-z][a-z0-9+\-.]*:\/\//i', $trimmedLine)) {
+            continue;
+        }
+
+        $rewrittenLine = rewriteProxyConfigHost($trimmedLine);
+        $lines[$index] = str_replace($trimmedLine, $rewrittenLine, $line);
+    }
+
+    return implode("\n", $lines);
 }
 function outputlinksub($url)
 {

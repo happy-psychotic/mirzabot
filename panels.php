@@ -90,7 +90,7 @@ class ManagePanel
                     if (isBase64($out_put_link)) {
                         $data_Output['links'] = base64_decode(string: outputlink($data_Output['subscription_url']));
                     }
-                    $data_Output['links'] = explode("\n", $data_Output['links']);
+                    $data_Output['links'] = normalizeConfigLinks(explode("\n", $data_Output['links']));
                 }
                 if ($inoice != false) {
                     $data_Output['subscription_url'] = "https://$domainhosts/sub/" . $inoice['id_invoice'];
@@ -131,7 +131,7 @@ class ManagePanel
                 if (isBase64($data_Output['links'])) {
                     $data_Output['links'] = base64_decode($data_Output['links']);
                 }
-                $links_user = explode("\n", trim($data_Output['links']));
+                $links_user = normalizeConfigLinks(explode("\n", trim($data_Output['links'])));
                 $date = new DateTime($data_Output['expire']);
                 if ($inoice != false) {
                     $data_Output['subscription_url'] = "https://$domainhosts/sub/" . $inoice['id_invoice'];
@@ -170,7 +170,7 @@ class ManagePanel
                     if (isBase64($links_user)) {
                         $links_user = base64_decode($links_user);
                     }
-                    $links_user = explode("\n", trim($links_user));
+                    $links_user = normalizeConfigLinks(explode("\n", trim($links_user)));
                     $Output['status'] = 'successful';
                     $Output['username'] = $usernameC;
                     $Output['subscription_url'] = $Get_Data_Panel['linksubx'] . "/{$subId}";
@@ -208,7 +208,7 @@ class ManagePanel
                     $Output['status'] = 'successful';
                     $Output['username'] = $usernameC;
                     $Output['subscription_url'] = $Get_Data_Panel['linksubx'] . "/{$subId}";
-                    $Output['configs'] = [outputlink($Output['subscription_url'])];
+                    $Output['configs'] = normalizeConfigLinks([outputlink($Output['subscription_url'])]);
                     if ($inoice != false) {
                         $Output['subscription_url'] = "https://$domainhosts/sub/" . $inoice['id_invoice'];
                     }
@@ -329,7 +329,7 @@ class ManagePanel
                 $Output['status'] = 'successful';
                 $Output['username'] = $usernameC;
                 $Output['subscription_url'] = $url_sub;
-                $Output['configs'] = [outputlink($url_sub)];
+                $Output['configs'] = normalizeConfigLinks([outputlink($url_sub)]);
             }
         } elseif ($Get_Data_Panel['type'] == "ibsng") {
             $password = bin2hex(random_bytes(6));
@@ -415,7 +415,7 @@ class ManagePanel
                 if ($Get_Data_Panel['version_panel'] == "1") {
                     $UsernameData['expire'] = strtotime($UsernameData['expire']);
                     $UsernameData['links'] = base64_decode(outputlink($UsernameData['subscription_url']));
-                    $UsernameData['links'] = explode("\n", $UsernameData['links']);
+                    $UsernameData['links'] = normalizeConfigLinks(explode("\n", $UsernameData['links']));
                     $sublist_update = get_list_update($name_panel, $username);
                     if (!empty($sublist_update['error'])) {
                         return array(
@@ -506,7 +506,7 @@ class ManagePanel
                     if (isBase64($UsernameData['links'])) {
                         $UsernameData['links'] = base64_decode($UsernameData['links']);
                     }
-                    $links_user = explode("\n", trim($UsernameData['links']));
+                    $links_user = normalizeConfigLinks(explode("\n", trim($UsernameData['links'])));
                     if ($UsernameData['data_limit'] == null) {
                         $UsernameData['data_limit'] = 0;
                     }
@@ -583,7 +583,7 @@ class ManagePanel
             $links_user = outputlink($Get_Data_Panel['linksubx'] . "/{$user_data['subId']}");
             if (isBase64($links_user))
                 $links_user = base64_decode($links_user);
-            $links_user = explode("\n", trim($links_user));
+            $links_user = normalizeConfigLinks(explode("\n", trim($links_user)));
             if ($inoice != false)
                 $linksub = "https://$domainhosts/sub/" . $inoice['id_invoice'];
             $user_data['lastOnline'] = $user_data['lastOnline'] == 0 ? "offline" : (new DateTime('@' . ($user_data['lastOnline'] / 1000)))->format('Y-m-d H:i:s');
@@ -728,7 +728,7 @@ class ManagePanel
                         'expire' => $expire,
                         'online_at' => $status_user,
                         'used_traffic' => $upTraffic + $downTraffic,
-                        'links' => [$subId !== '' ? outputlink($subscriptionUrl) : null],
+                        'links' => normalizeConfigLinks([$subId !== '' ? outputlink($subscriptionUrl) : null]),
                         'subscription_url' => $subscriptionUrl,
                         'sub_updated_at' => null,
                         'sub_last_user_agent' => null,
@@ -812,7 +812,7 @@ class ManagePanel
                 $links = [];
                 if (is_array($UsernameData['links'])) {
                     foreach ($UsernameData['links'] as $config) {
-                        $links[] = $config['uri'];
+                        $links[] = rewriteProxyConfigHost($config['uri']);
                     }
                 }
                 $data_limit = $UsernameData['volume'];
@@ -938,7 +938,7 @@ class ManagePanel
             } else {
                 $config = new ManagePanel();
                 $Data_User = $config->DataUser($name_panel, $username);
-                $Data_User['links'] = [base64_decode(outputlink($Data_User['subscription_url']))];
+                $Data_User['links'] = normalizeConfigLinks([base64_decode(outputlink($Data_User['subscription_url']))]);
                 $Output = array(
                     'status' => 'successful',
                     'configs' => $Data_User['links'],
@@ -969,7 +969,7 @@ class ManagePanel
             } else {
                 $Output = array(
                     'status' => 'successful',
-                    'configs' => [outputlink($Get_Data_Panel['linksubx'] . "/{$subId}")],
+                    'configs' => normalizeConfigLinks([outputlink($Get_Data_Panel['linksubx'] . "/{$subId}")]),
                     'subscription_url' => $Get_Data_Panel['linksubx'] . "/{$subId}",
                 );
             }
@@ -997,7 +997,7 @@ class ManagePanel
             } else {
                 $Output = array(
                     'status' => 'successful',
-                    'configs' => [outputlink($Get_Data_Panel['linksubx'] . "/{$subId}")],
+                    'configs' => normalizeConfigLinks([outputlink($Get_Data_Panel['linksubx'] . "/{$subId}")]),
                     'subscription_url' => $Get_Data_Panel['linksubx'] . "/{$subId}",
                 );
             }
@@ -1093,7 +1093,7 @@ class ManagePanel
                 $url_sub = $url[0] . ":" . $url[1] . ":" . $setting_app['subPort'] . $setting_app['subPath'] . $username;
                 $Output = array(
                     'status' => 'successful',
-                    'configs' => [outputlink($url_sub)],
+                    'configs' => normalizeConfigLinks([outputlink($url_sub)]),
                     'subscription_url' => $url_sub,
                 );
             }
