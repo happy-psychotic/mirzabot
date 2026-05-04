@@ -60,6 +60,46 @@ function normalizeAlirezaClientMatches(array $matches)
     return [$config, $stats];
 }
 
+function decodeAlirezaInboundClients($settings)
+{
+    if (is_string($settings)) {
+        $settings = json_decode($settings, true);
+    }
+
+    if (!is_array($settings) || empty($settings['clients']) || !is_array($settings['clients'])) {
+        return [];
+    }
+
+    return $settings['clients'];
+}
+
+function extractAlirezaClientFromInbound(array $inbound, $username)
+{
+    $configMatch = [];
+    foreach (decodeAlirezaInboundClients($inbound['settings'] ?? []) as $client) {
+        if (($client['email'] ?? null) === $username) {
+            $configMatch = $client;
+            break;
+        }
+    }
+
+    $statsMatch = [];
+    if (!empty($inbound['clientStats']) && is_array($inbound['clientStats'])) {
+        foreach ($inbound['clientStats'] as $clientStats) {
+            if (($clientStats['email'] ?? null) === $username) {
+                $statsMatch = $clientStats;
+                break;
+            }
+        }
+    }
+
+    if (empty($configMatch) && empty($statsMatch)) {
+        return [];
+    }
+
+    return [$configMatch, $statsMatch];
+}
+
 function get_clinetsalireza($username,$namepanel){
     $marzban_list_get = select("marzban_panel", "*", "name_panel", $namepanel,"select");
     login($marzban_list_get['code_panel']);
@@ -94,21 +134,12 @@ if(empty($response)){
     return get_clinetsalireza_fallback($username, $namepanel);
 }
 foreach ($response as $client){
-    $clientdata= json_decode($client['settings'],true)['clients'];
-    foreach($clientdata as $clinets){
-    if($clinets['email'] == $username){
-        $output[] = $clinets;
-        break;
+    $match = extractAlirezaClientFromInbound($client, $username);
+    if (!empty($match)) {
+        curl_close($curl);
+        @unlink($cookieFile);
+        return $match;
     }
-    }
-    $clientStats= $client['clientStats'];
-    foreach($clientStats as $clinetsup){
-    if($clinetsup['email'] == $username){
-        $output[] = $clinetsup;
-        break;
-    }
-    }
-    
 }
 curl_close($curl);
 @unlink($cookieFile);

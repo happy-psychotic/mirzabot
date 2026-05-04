@@ -5,11 +5,8 @@ session_regenerate_id(true);
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../function.php';
 require_once __DIR__ . '/../botapi.php';
-$allowed_ips = select("setting","*",null,null,"select");
 
-$user_ip = $_SERVER['REMOTE_ADDR'];
 $admin_ids = select("admin", "id_admin", null, null, "FETCH_COLUMN");
-$check_ip = $allowed_ips['iplogin'] == $user_ip ? true : false;
 $texterrr = "";
 $_SESSION["user"] = null;
 if (isset($_POST['login'])) {
@@ -68,22 +65,6 @@ if (isset($_POST['login'])) {
 
   <body class="login-body">
     <div class="container">
-        <?php if(!$check_ip){?>
-        <div class="error-card">
-            
-            <div class="error-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                    <path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm0-2a8 8 0 1 0 0-16 8 8 0 0 0 0 16zm-1-5h2v2h-2v-2zm0-8h2v6h-2V7z"/>
-                </svg>
-            </div>
-            
-            <h1>دسترسی محدود شده</h1>
-            <p>جهت استفاده از پنل تحت وب باید از داخل ربات زیر پیام اطلاعات ورود دکمه تنظیم آیپی ورود را زده و آیپی زیر را در آنجا ارسال کنید تا بتوانید استفاده نمایید.</p>
-            
-            <div class="ip-address" id="user-ip"><?php echo $user_ip; ?></div>
-        </div>
-        <?php } ?>
-        <?php if($check_ip){?>
       <form method="post" class="form-signin" action="<?php echo htmlspecialchars($_SERVER['PHP_SELF']); ?>">
         <h2 class="form-signin-heading">پنل مدیریت ربات میرزا</h2>
         <div class="login-wrap">
@@ -94,7 +75,6 @@ if (isset($_POST['login'])) {
         </div>
 
       </form>
-      <?php } ?>
     </div>
 
 
