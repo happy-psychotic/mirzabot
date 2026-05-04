@@ -93,6 +93,39 @@ $replacements = [
     'text_wheel_luck' => $datatextbot['text_wheel_luck'],
     'text_extend' => $datatextbot['text_extend']
 ];
+
+if (!function_exists('shouldShowMainMenuButton')) {
+    function shouldShowMainMenuButton($buttonKey, $setting, $datatextbot, $pdo)
+    {
+        switch ($buttonKey) {
+            case 'text_usertest':
+                $stmt = $pdo->prepare("SELECT COUNT(*) FROM marzban_panel WHERE TestAccount = 'ONTestAccount' AND status = 'active'");
+                $stmt->execute();
+                return intval($stmt->fetchColumn()) > 0;
+
+            case 'text_wheel_luck':
+                return isset($setting['wheelـluck']) && strval($setting['wheelـluck']) === "1";
+
+            case 'text_help':
+                if (isset($setting['linkappstatus']) && strval($setting['linkappstatus']) === "1") {
+                    return true;
+                }
+                $stmt = $pdo->prepare("SELECT COUNT(*) FROM help");
+                $stmt->execute();
+                return intval($stmt->fetchColumn()) > 0;
+
+            case 'text_Tariff_list':
+                $hasDescription = isset($datatextbot['text_dec_Tariff_list']) && trim(strval($datatextbot['text_dec_Tariff_list'])) !== '';
+                $stmt = $pdo->prepare("SELECT COUNT(*) FROM product");
+                $stmt->execute();
+                $hasProducts = intval($stmt->fetchColumn()) > 0;
+                return $hasDescription && $hasProducts;
+
+            default:
+                return true;
+        }
+    }
+}
 $admin_idss = select("admin", "*", "id_admin", $from_id,"count");
 $temp_addtional_key = [];
 $keyboardLayout = json_decode($setting['keyboardmain'], true);
@@ -103,6 +136,14 @@ if (is_array($keyboardLayout) && isset($keyboardLayout['keyboard']) && is_array(
 
 if ($setting['inlinebtnmain'] == "oninline" && !empty($keyboardRows)) {
     $trace_keyboard = $keyboardRows;
+    foreach ($trace_keyboard as $rowKey => $rowButtons) {
+        $trace_keyboard[$rowKey] = array_values(array_filter($rowButtons, function ($button) use ($setting, $datatextbot, $pdo) {
+            return !isset($button['text']) || shouldShowMainMenuButton($button['text'], $setting, $datatextbot, $pdo);
+        }));
+    }
+    $trace_keyboard = array_values(array_filter($trace_keyboard, function ($rowButtons) {
+        return !empty($rowButtons);
+    }));
     foreach ($trace_keyboard as $key => $callback_set) {
         foreach ($callback_set as $keyboard_key => $keyboard) {
             if ($keyboard['text'] == "text_sell") {
@@ -140,10 +181,10 @@ if ($setting['inlinebtnmain'] == "oninline" && !empty($keyboardRows)) {
     if ($admin_idss != 0) {
         $temp_addtional_key[] = ['text' => $textbotlang['Admin']['textpaneladmin'], 'callback_data' => "admin"];
     }
-    if ($users['agent'] != "f") {
+    if ($users['agent'] != "f" && trim(strval($datatextbot['textpanelagent'])) !== '') {
         $temp_addtional_key[] = ['text' => $datatextbot['textpanelagent'], 'callback_data' => "agentpanel"];
     }
-    if ($users['agent'] == "f" && $setting['statusagentrequest'] == "onrequestagent") {
+    if ($users['agent'] == "f" && $setting['statusagentrequest'] == "onrequestagent" && trim(strval($datatextbot['textrequestagent'])) !== '' && trim(strval($datatextbot['text_request_agent_dec'] ?? '')) !== '') {
         $temp_addtional_key[] = ['text' => $datatextbot['textrequestagent'], 'callback_data' => "requestagent"];
     }
     $keyboard = ['inline_keyboard' => []];
@@ -153,13 +194,21 @@ if ($setting['inlinebtnmain'] == "oninline" && !empty($keyboardRows)) {
     $keyboard['inline_keyboard'] = $keyboardcustom;
     $keyboard = json_encode($keyboard);
 } else {
+    $keyboardRows = array_values(array_filter(array_map(function ($rowButtons) use ($setting, $datatextbot, $pdo) {
+        $filteredRow = array_values(array_filter($rowButtons, function ($button) use ($setting, $datatextbot, $pdo) {
+            return !isset($button['text']) || shouldShowMainMenuButton($button['text'], $setting, $datatextbot, $pdo);
+        }));
+        return $filteredRow;
+    }, $keyboardRows), function ($rowButtons) {
+        return !empty($rowButtons);
+    }));
     if ($admin_idss != 0) {
         $temp_addtional_key[] = ['text' => $textbotlang['Admin']['textpaneladmin']];
     }
-    if ($users['agent'] != "f") {
+    if ($users['agent'] != "f" && trim(strval($datatextbot['textpanelagent'])) !== '') {
         $temp_addtional_key[] = ['text' => $datatextbot['textpanelagent']];
     }
-    if ($users['agent'] == "f" && $setting['statusagentrequest'] == "onrequestagent") {
+    if ($users['agent'] == "f" && $setting['statusagentrequest'] == "onrequestagent" && trim(strval($datatextbot['textrequestagent'])) !== '' && trim(strval($datatextbot['text_request_agent_dec'] ?? '')) !== '') {
         $temp_addtional_key[] = ['text' => $datatextbot['textrequestagent']];
     }
     $keyboard = ['keyboard' => [], 'resize_keyboard' => true];
