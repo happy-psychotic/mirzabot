@@ -27,6 +27,25 @@ if (!is_array($admin_idsmain)) {
 if (!in_array($from_id, $admin_ids_decoded) && !in_array($from_id, $admin_idsmain)) {
     unset($keyboarddate['text_Admin']);
 }
+
+// Hide test-service button when this reseller has no accessible test panel.
+$stmt = $pdo->prepare("SELECT * FROM marzban_panel WHERE TestAccount = 'ONTestAccount' AND status = 'active' AND (agent = :agent OR agent = 'all')");
+$stmt->bindParam(':agent', $userbot['agent']);
+$stmt->execute();
+$hasAvailableTestPanel = false;
+while ($result = $stmt->fetch(PDO::FETCH_ASSOC)) {
+    if ($result['hide_user'] != null && in_array($from_id, json_decode($result['hide_user'], true))) {
+        continue;
+    }
+    if (is_array($hide_panel) && in_array($result['name_panel'], $hide_panel)) {
+        continue;
+    }
+    $hasAvailableTestPanel = true;
+    break;
+}
+if (!$hasAvailableTestPanel) {
+    unset($keyboarddate['text_usertest']);
+}
 $keyboard = ['keyboard' => [], 'resize_keyboard' => true];
 $tempArray = [];
 
