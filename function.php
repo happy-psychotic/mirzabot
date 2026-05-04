@@ -1578,6 +1578,15 @@ function checktelegramip()
         return false;
     }
 
+    // Some deployments terminate TLS/proxy locally and forward requests to PHP-FPM,
+    // which makes REMOTE_ADDR a private/local address (e.g. 127.0.0.1).
+    // In that setup Telegram IP validation must happen at the edge proxy layer.
+    if (
+        filter_var($clientIp, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false
+    ) {
+        return true;
+    }
+
     $telegramIpRanges = [
         ['lower' => '149.154.160.0', 'upper' => '149.154.175.255'],
         ['lower' => '91.108.4.0', 'upper' => '91.108.7.255'],
