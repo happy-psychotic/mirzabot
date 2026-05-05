@@ -100,6 +100,102 @@ function extractAlirezaClientFromInbound(array $inbound, $username)
     return [$configMatch, $statsMatch];
 }
 
+function getAlirezaInbound($namepanel, $inboundid)
+{
+    $marzban_list_get = select("marzban_panel", "*", "name_panel", $namepanel, "select");
+    login($marzban_list_get['code_panel']);
+    $cookieFile = getPanelCookieFile($marzban_list_get['code_panel']);
+    $url = rtrim($marzban_list_get['url_panel'], '/') . '/xui/API/inbounds/get/' . intval($inboundid);
+    $headers = [
+        'Accept: application/json',
+        'Content-Type: application/json',
+    ];
+    $req = new CurlRequest($url);
+    $req->setHeaders($headers);
+    $req->setCookie($cookieFile);
+    $response = $req->get();
+    @unlink($cookieFile);
+
+    return $response;
+}
+
+function updateAlirezaInbound($namepanel, $inboundid, array $payload)
+{
+    $marzban_list_get = select("marzban_panel", "*", "name_panel", $namepanel, "select");
+    login($marzban_list_get['code_panel']);
+    $cookieFile = getPanelCookieFile($marzban_list_get['code_panel']);
+    $url = rtrim($marzban_list_get['url_panel'], '/') . '/xui/API/inbounds/update/' . intval($inboundid);
+    $headers = [
+        'Accept: application/json',
+        'Content-Type: application/json',
+    ];
+    $req = new CurlRequest($url);
+    $req->setHeaders($headers);
+    $req->setCookie($cookieFile);
+    $response = $req->post(json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+    @unlink($cookieFile);
+
+    return $response;
+}
+
+function appendClientViaInboundUpdate($namepanel, $usernameac, $Expire, $Total, $Uuid, $Flow, $subid, $inboundid)
+{
+    $inboundResponse = getAlirezaInbound($namepanel, $inboundid);
+    if (!is_array($inboundResponse) || !empty($inboundResponse['error']) || empty($inboundResponse['body'])) {
+        return $inboundResponse;
+    }
+
+    $decodedInbound = json_decode($inboundResponse['body'], true);
+    if (!is_array($decodedInbound) || empty($decodedInbound['success']) || empty($decodedInbound['obj'])) {
+        return [
+            'status' => 200,
+            'body' => json_encode([
+                'success' => false,
+                'msg' => $decodedInbound['msg'] ?? 'Failed to load inbound for fallback update',
+                'obj' => null,
+            ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+        ];
+    }
+
+    $inbound = $decodedInbound['obj'];
+    $settings = json_decode($inbound['settings'] ?? '{}', true);
+    if (!is_array($settings)) {
+        $settings = [];
+    }
+    if (empty($settings['clients']) || !is_array($settings['clients'])) {
+        $settings['clients'] = [];
+    }
+
+    $settings['clients'][] = [
+        "id" => $Uuid,
+        "flow" => $Flow,
+        "email" => $usernameac,
+        "totalGB" => $Total,
+        "expiryTime" => $Expire,
+        "enable" => true,
+        "tgId" => "",
+        "subId" => $subid,
+        "reset" => 0,
+    ];
+
+    $payload = [
+        'up' => intval($inbound['up'] ?? 0),
+        'down' => intval($inbound['down'] ?? 0),
+        'total' => intval($inbound['total'] ?? 0),
+        'remark' => strval($inbound['remark'] ?? ''),
+        'enable' => (bool)($inbound['enable'] ?? true),
+        'expiryTime' => intval($inbound['expiryTime'] ?? 0),
+        'listen' => strval($inbound['listen'] ?? ''),
+        'port' => intval($inbound['port'] ?? 0),
+        'protocol' => strval($inbound['protocol'] ?? ''),
+        'settings' => json_encode($settings, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+        'streamSettings' => $inbound['streamSettings'] ?? '{}',
+        'sniffing' => $inbound['sniffing'] ?? '{}',
+    ];
+
+    return updateAlirezaInbound($namepanel, $inboundid, $payload);
+}
+
 function get_clinetsalireza($username,$namepanel){
     $marzban_list_get = select("marzban_panel", "*", "name_panel", $namepanel,"select");
     login($marzban_list_get['code_panel']);
@@ -220,6 +316,16 @@ function addClientalireza_singel($namepanel, $usernameac, $Expire,$Total, $Uuid,
     $req->setCookie($cookieFile);
     $response = $req->post($configpanel);
     @unlink($cookieFile);
+    $decodedResponse = isset($response['body']) ? json_decode($response['body'], true) : null;
+    $panelErrorMessage = is_array($decodedResponse) ? ($decodedResponse['msg'] ?? '') : '';
+    if (
+        is_array($decodedResponse)
+        && empty($decodedResponse['success'])
+        && is_string($panelErrorMessage)
+        && strpos($panelErrorMessage, "JSON_EXTRACT(client.value, '$.email')") !== false
+    ) {
+        return appendClientViaInboundUpdate($namepanel, $usernameac, $Expire, $Total, $Uuid, $Flow, $subid, $inboundid);
+    }
     return $response;
 }
 function updateClientalireza($namepanel, $username,array $config){
