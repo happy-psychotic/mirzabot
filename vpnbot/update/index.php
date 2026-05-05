@@ -852,7 +852,12 @@ if ($text == $text_bot_var['btn_keyboard']['buy'] && $setting['active_step_note'
             $code_product = $userdate['code_product'];
         }
     } else {
-        $code_product = $dataget[1];
+        $code_product = $dataget[1] ?? ($userdate['code_product'] ?? null);
+        if ($code_product === null) {
+            sendmessage($from_id, "❌ خطایی در هنگام خرید رخ داده لطفا مراحل را از اول طی کنید", $keyboard, 'html');
+            step("home", $from_id);
+            return;
+        }
     }
     if (!in_array($user['step'], ["endstepuserscustom", "getvolumecustomuser"])) {
         $product = select("product", "*", "code_product", $code_product);
@@ -1054,12 +1059,15 @@ if ($text == $text_bot_var['btn_keyboard']['buy'] && $setting['active_step_note'
         'type' => 'buy_agent_user_bot'
     );
     $dataoutput = $ManagePanel->createUser($marzban_list_get['name_panel'], $datafactor['code_product'], $username_ac, $datac);
-    if ($dataoutput['username'] == null) {
-        $dataoutput['msg'] = json_encode($dataoutput['msg']);
+    if (($dataoutput['status'] ?? null) !== 'successful' || empty($dataoutput['username'])) {
+        $errorMessage = $dataoutput['msg'] ?? 'Unknown reseller createUser failure';
+        if (is_array($errorMessage) || is_object($errorMessage)) {
+            $errorMessage = json_encode($errorMessage, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        }
         sendmessage($from_id, $textbotlang['users']['sell']['ErrorConfig'], $keyboard, 'HTML');
         $texterros = "⭕️ خطای ساخت اشتراک  در ربات نماینده
 ✍️ دلیل خطا : 
-{$dataoutput['msg']}
+{$errorMessage}
 آیدی کابر : $from_id
 نام کاربری کاربر : @$username
 نام پنل : {$marzban_list_get['name_panel']}";

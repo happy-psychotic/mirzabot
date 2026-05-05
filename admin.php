@@ -10449,12 +10449,24 @@ if (isset($update["inline_query"])) {
     }
     if (!copyDirectoryContents($destination . '/vpnbot/Default', $dirsource)) {
         error_log('Failed to copy default bot files into: ' . $dirsource);
+        sendmessage($from_id, "❌ ساخت فایل های ربات نماینده با خطا مواجه شد. دسترسی پوشه `vpnbot` را بررسی کنید و دوباره تلاش نمایید.", $keyboardadmin, 'HTML');
+        return;
+    }
+    if (!is_file($dirsource . "/config.php")) {
+        error_log('Generated bot config is missing after copy: ' . $dirsource . '/config.php');
+        sendmessage($from_id, "❌ فایل تنظیمات ربات نماینده ساخته نشد. دوباره تلاش نمایید.", $keyboardadmin, 'HTML');
+        return;
     }
     $contentconfig = file_get_contents($dirsource . "/config.php");
     $new_code = str_replace('BotTokenNew', $userdate['token'], $contentconfig);
     file_put_contents($dirsource . "/config.php", $new_code);
-    file_get_contents("https://api.telegram.org/bot{$userdate['token']}/setwebhook?url=https://$domainhosts/vpnbot/{$userdate['id_user']}{$userdate['username']}/index.php");
-    file_get_contents("https://api.telegram.org/bot{$userdate['token']}/sendmessage?chat_id={$userdate['id_user']}&text=✅ کاربر عزیز ربات شما با موفقیت نصب گردید.");
+    $webhookResponse = @file_get_contents("https://api.telegram.org/bot{$userdate['token']}/setwebhook?url=https://$domainhosts/vpnbot/{$userdate['id_user']}{$userdate['username']}/index.php");
+    if ($webhookResponse === false) {
+        error_log('Failed to set reseller bot webhook for: ' . $userdate['username']);
+        sendmessage($from_id, "❌ وبهوک ربات نماینده تنظیم نشد. دوباره تلاش نمایید.", $keyboardadmin, 'HTML');
+        return;
+    }
+    @file_get_contents("https://api.telegram.org/bot{$userdate['token']}/sendmessage?chat_id={$userdate['id_user']}&text=✅ کاربر عزیز ربات شما با موفقیت نصب گردید.");
     $datasetting = json_encode(array(
         "minpricetime" => 4000,
         "pricetime" => 4000,

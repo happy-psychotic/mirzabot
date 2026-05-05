@@ -28,6 +28,7 @@ rsync -az --delete \
 ssh "$HOST" "chmod 755 '$APP_DIR' \
   && find '$APP_DIR' -type d -exec chmod 755 {} + \
   && find '$APP_DIR' -type f -exec chmod 644 {} + \
+  && chmod 777 '$APP_DIR/vpnbot' \
   && find '$APP_DIR/scripts' -type f -name '*.sh' -exec chmod 755 {} + \
   && cd '$APP_DIR' \
   && php -l index.php >/dev/null \
