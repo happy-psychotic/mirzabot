@@ -102,6 +102,19 @@ What it does:
 - does not require GitHub access from the server
 - does not make a full backup every deploy
 - runs basic `php -l` syntax checks on the server after upload
+- does not automatically overwrite generated reseller bot folders
+
+Dry-run before a risky deploy:
+
+```bash
+DRY_RUN=1 /home/saeid/Documents/AntiBan/scripts/deploy_antibot_from_local.sh
+```
+
+Generated reseller bot templates can be synced manually only after review:
+
+```bash
+ssh antibot 'bash /var/www/mirza_pro/scripts/sync_reseller_templates.sh /var/www/mirza_pro'
+```
 
 ## When To Take A Manual Backup
 No need to take a full backup for every routine code deploy.

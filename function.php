@@ -717,7 +717,7 @@ function outputlink($text)
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $text);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_TIMEOUT_MS, 6000);
+    curl_setopt($ch, CURLOPT_TIMEOUT_MS, 15000);
     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
     curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
@@ -726,12 +726,12 @@ function outputlink($text)
     $response = curl_exec($ch);
     if ($response === false) {
         $error = curl_error($ch);
+        curl_close($ch);
         return null;
-    } else {
-        return rewriteSubscriptionPayloadHost($response);
     }
 
     curl_close($ch);
+    return rewriteSubscriptionPayloadHost($response);
 }
 function runtimeTempPath($prefix, $suffix = '')
 {
@@ -751,6 +751,14 @@ function getConfigHostOverride()
     $resolved = true;
     $cachedOverride = '185.143.234.235';
 
+    if (getenv('MIRZABOT_TESTING') === '1') {
+        $testOverride = getenv('MIRZABOT_TEST_CONFIG_HOST_OVERRIDE');
+        if (is_string($testOverride) && trim($testOverride) !== '') {
+            $cachedOverride = trim($testOverride);
+            return $cachedOverride;
+        }
+    }
+
     try {
         global $pdo;
         if (isset($pdo) && $pdo instanceof PDO) {
@@ -767,6 +775,38 @@ function getConfigHostOverride()
 
     return $cachedOverride;
 }
+function isConfigHostRewriteEnabled()
+{
+    static $enabled = null;
+
+    if ($enabled !== null) {
+        return $enabled;
+    }
+
+    $enabled = false;
+
+    if (getenv('MIRZABOT_TESTING') === '1') {
+        $testStatus = getenv('MIRZABOT_TEST_CONFIG_HOST_REWRITE_STATUS');
+        if (is_string($testStatus) && $testStatus !== '') {
+            $enabled = strtolower(trim($testStatus)) === 'on';
+            return $enabled;
+        }
+    }
+
+    try {
+        global $pdo;
+        if (isset($pdo) && $pdo instanceof PDO) {
+            $stmt = $pdo->query("SELECT config_host_rewrite_status FROM setting LIMIT 1");
+            if ($stmt !== false) {
+                $value = $stmt->fetchColumn();
+                $enabled = is_string($value) && strtolower(trim($value)) === 'on';
+            }
+        }
+    } catch (Throwable $exception) {
+    }
+
+    return $enabled;
+}
 function rewriteProxyConfigHost($configLine, $overrideHost = null)
 {
     if (!is_string($configLine)) {
@@ -775,6 +815,10 @@ function rewriteProxyConfigHost($configLine, $overrideHost = null)
 
     $configLine = trim($configLine);
     if ($configLine === '') {
+        return $configLine;
+    }
+
+    if ($overrideHost === null && !isConfigHostRewriteEnabled()) {
         return $configLine;
     }
 
@@ -885,7 +929,7 @@ function outputlinksub($url)
     var_dump($url);
     curl_setopt($ch, CURLOPT_URL, "$url/info");
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-    curl_setopt($ch, CURLOPT_TIMEOUT_MS, 6000);
+    curl_setopt($ch, CURLOPT_TIMEOUT_MS, 15000);
     $userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36';
     curl_setopt($ch, CURLOPT_USERAGENT, $userAgent);
     curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'GET');
@@ -901,8 +945,8 @@ function outputlinksub($url)
     if (curl_errno($ch)) {
         echo 'Error:' . curl_error($ch);
     }
-    return $result;
     curl_close($ch);
+    return $result;
 }
 function DirectPayment($order_id, $image = 'images.jpg')
 {

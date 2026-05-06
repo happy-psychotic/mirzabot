@@ -2254,6 +2254,10 @@ $caption";
         '1' => $textbotlang['Admin']['Status']['statuson'],
         '0' => $textbotlang['Admin']['Status']['statusoff']
     ][$setting['status_keyboard_config']];
+    $config_host_rewrite_text = [
+        'on' => $textbotlang['Admin']['Status']['statuson'],
+        'off' => $textbotlang['Admin']['Status']['statusoff']
+    ][$setting['config_host_rewrite_status'] ?? 'off'];
     $Bot_Status = json_encode([
         'inline_keyboard' => [
             [
@@ -2327,6 +2331,10 @@ $caption";
             [
                 ['text' => $keyboard_config_text, 'callback_data' => "editstsuts-keyconfig-{$setting['status_keyboard_config']}"],
                 ['text' => "🔗 کیبورد کانفیگی", 'callback_data' => "keyconfig"],
+            ],
+            [
+                ['text' => $config_host_rewrite_text, 'callback_data' => "editstsuts-confighostrewrite-" . ($setting['config_host_rewrite_status'] ?? 'off')],
+                ['text' => "🌐 بازنویسی آدرس کانفیگ", 'callback_data' => "confighostrewrite"],
             ],
             [
                 ['text' => $statusDice, 'callback_data' => "editstsuts-Dice-{$setting['Dice']}"],
@@ -2522,6 +2530,13 @@ $caption";
             $valuenew = "1";
         }
         update("setting", "status_keyboard_config", $valuenew);
+    } elseif ($type == "confighostrewrite") {
+        if ($value == "on") {
+            $valuenew = "off";
+        } else {
+            $valuenew = "on";
+        }
+        update("setting", "config_host_rewrite_status", $valuenew);
     } elseif ($type == "Lotteryagent") {
         if ($value == "1") {
             $valuenew = "0";
@@ -2877,6 +2892,10 @@ $caption";
         '1' => $textbotlang['Admin']['Status']['statuson'],
         '0' => $textbotlang['Admin']['Status']['statusoff']
     ][$setting['status_keyboard_config']];
+    $config_host_rewrite_text = [
+        'on' => $textbotlang['Admin']['Status']['statuson'],
+        'off' => $textbotlang['Admin']['Status']['statusoff']
+    ][$setting['config_host_rewrite_status'] ?? 'off'];
     $Bot_Status = json_encode([
         'inline_keyboard' => [
             [
@@ -2950,6 +2969,10 @@ $caption";
             [
                 ['text' => $keyboard_config_text, 'callback_data' => "editstsuts-keyconfig-{$setting['status_keyboard_config']}"],
                 ['text' => "🔗 کیبورد کانفیگی", 'callback_data' => "keyconfig"],
+            ],
+            [
+                ['text' => $config_host_rewrite_text, 'callback_data' => "editstsuts-confighostrewrite-" . ($setting['config_host_rewrite_status'] ?? 'off')],
+                ['text' => "🌐 بازنویسی آدرس کانفیگ", 'callback_data' => "confighostrewrite"],
             ],
             [
                 ['text' => $statusDice, 'callback_data' => "editstsuts-Dice-{$setting['Dice']}"],

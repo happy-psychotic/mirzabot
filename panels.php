@@ -1389,20 +1389,28 @@ class ManagePanel
                 'data' => $modify
             );
         } elseif ($Get_Data_Panel['type'] == "alireza_single") {
-            $clients = get_clinetsalireza($username, $name_panel)[0];
+            $clientRows = get_clinetsalireza($username, $name_panel);
+            if (!is_array($clientRows) || empty($clientRows[0]) || !is_array($clientRows[0])) {
+                return array(
+                    'status' => false,
+                    'msg' => 'User not found'
+                );
+            }
+            $clients = $clientRows[0];
+            $clientStats = isset($clientRows[1]) && is_array($clientRows[1]) ? $clientRows[1] : [];
             $configs = array(
                 'id' => intval($Get_Data_Panel['inboundid']),
                 'settings' => json_encode(
                     array(
                         'clients' => array(
                             array(
-                                "id" => $clients['id'],
-                                "flow" => $clients['flow'],
-                                "email" => $clients['email'],
-                                "totalGB" => $clients['totalGB'],
-                                "expiryTime" => $clients['expiryTime'],
-                                "enable" => true,
-                                "subId" => $clients['subId'],
+                                "id" => $clients['id'] ?? ($clientStats['id'] ?? ''),
+                                "flow" => $clients['flow'] ?? "",
+                                "email" => $clients['email'] ?? ($clientStats['email'] ?? $username),
+                                "totalGB" => $clients['totalGB'] ?? ($clientStats['total'] ?? 0),
+                                "expiryTime" => $clients['expiryTime'] ?? ($clientStats['expiryTime'] ?? 0),
+                                "enable" => $clients['enable'] ?? ($clientStats['enable'] ?? true),
+                                "subId" => $clients['subId'] ?? ($clientStats['subId'] ?? ''),
                             )
                         ),
                         'decryption' => 'none',

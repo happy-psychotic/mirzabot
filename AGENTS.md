@@ -87,7 +87,7 @@ The codebase is monolithic PHP with a database-first design. Many behaviors are 
 - Notes:
   - Old-style PHP pages rendered server-side.
   - Session-based login.
-  - Login is additionally gated by `setting.iplogin`.
+  - Current local fork removed the previous `setting.iplogin` gate from web login. Treat future auth-related edits as sensitive.
   - Passwords are compared as plain strings in current code. Treat auth-related edits as sensitive.
 
 ### Mini-App Frontend
@@ -190,6 +190,12 @@ Known production bot server:
 - Server should not be treated as an internet-connected git client.
 - Preferred deployment model is local-to-server upload over SSH.
 
+Known disposable test panel:
+- Alireza x-ui is installed on `antibot` for test-only use.
+- Source of truth for URL, credentials, and disposable inbound details: [docs/test-panel.md](/home/saeid/Documents/AntiBan/docs/test-panel.md)
+- Do not use this panel for production customers.
+- Do not change `/var/www/mirza_pro` when maintaining the test panel.
+
 Known deploy script:
 - [scripts/deploy_antibot_from_local.sh](/home/saeid/Documents/AntiBan/scripts/deploy_antibot_from_local.sh)
 
@@ -199,6 +205,8 @@ What the current deploy script does:
 - preserves server-local files such as `config.php` and runtime artifacts
 - does not take a full backup on every deploy
 - runs basic PHP syntax validation on `index.php` and `config.php` on the server
+- supports `DRY_RUN=1` for preflight review of `rsync --delete`
+- does not automatically sync generated reseller bot folders; run `scripts/sync_reseller_templates.sh` manually only after review
 
 ## Update Architecture
 Use this repo as the source of truth. Do not treat direct server edits as authoritative.
@@ -286,3 +294,15 @@ git push --force-with-lease
 - If a change affects schemas, include migration-safe logic in `table.php`.
 - If a change affects deploys, keep the update script and AGENTS doc aligned.
 - Full backups are not required on every deploy. Take a manual backup only before high-risk changes such as schema changes, installer rewrites, panel adapter rewrites, or destructive file moves.
+
+## Testing Standard
+- Use [docs/testing.md](/home/saeid/Documents/AntiBan/docs/testing.md) as the testing guide.
+- Not every change needs automated tests. Require tests when a change affects business flows, panel adapters, shared helpers, schema/default data, auth/security, cron state changes, payment/invoice state, subscription/config output, reseller bot flows, or deploy/update behavior.
+- Documentation-only changes, copy-only text changes, inactive/unused feature areas, and static assets usually do not need tests.
+- For touched PHP files, run `php -l` at minimum.
+- When tests are needed but cannot yet be automated safely, document the manual verification and the reason automated coverage was skipped.
+- For Alireza single, reseller purchase, config-host rewrite, reset/revoke subscription, and backup cron changes, prefer fixture-backed tests or a disposable test panel/client before production deploy.
+
+## Current Active Priority Surface
+- Prioritize Alireza single panel integration, main purchase flow, reseller/agent bot purchase flow, card-to-card receipt flow, config delivery, debt settlement, card-number copy, panel uptime cron, and backup diagnostics.
+- Deprioritize currently inactive screenshot features: Plisio, NowPayments, Rial gateways, Aqaye Pardakht, Zarinpal, offline crypto, Star Telegram, extra time, issue reporting, categories, refund button, representative request, identity gates, notes, bulk buy, training category, representative group, contact display, wheels/lotteries, test cron, and cleanup crons.

@@ -1,4 +1,19 @@
 <?php
+if (getenv('MIRZABOT_TESTING') === '1') {
+    $request_exec_timeout = null;
+    $dbhost = 'localhost';
+    $dbname = 'mirzabot_test';
+    $usernamedb = 'mirzabot_test';
+    $passworddb = '';
+    $connect = null;
+    $pdo = null;
+    $APIKEY = 'TEST_BOT_TOKEN';
+    $adminnumber = '0';
+    $domainhosts = 'example.test';
+    $usernamebot = 'test_bot';
+    return;
+}
+
 // This variable added for high load panels which their response time is long and bot can't communicate with online panel!
 // null for default settings
 $request_exec_timeout = null;

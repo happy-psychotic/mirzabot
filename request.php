@@ -11,7 +11,7 @@ class CurlRequest {
     public function __construct($url) {
         global $request_exec_timeout;
         $this->url = $url;
-        $this->timeout = $request_exec_timeout;
+        $this->timeout = $request_exec_timeout ?: 15000;
     }
 
     public function setTimeout($seconds) {
@@ -48,7 +48,7 @@ class CurlRequest {
     }
 
     private function execute($method, $data = null) {
-        $this->timeout = !$this->timeout  ?  10000 : $this->timeout;
+        $this->timeout = !$this->timeout  ?  15000 : $this->timeout;
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $this->url);
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, strtoupper($method));
