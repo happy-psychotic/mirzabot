@@ -9,6 +9,6 @@ $reflection = new ReflectionClass($request);
 $property = $reflection->getProperty('timeout');
 $property->setAccessible(true);
 
-assertSameValue(15000, $property->getValue($request), 'default CurlRequest timeout should be 15 seconds');
+assertSameValue(40000, $property->getValue($request), 'default CurlRequest timeout should be 40 seconds');
 
 passTest('CurlRequestTimeoutTest');

@@ -2,6 +2,7 @@
 require_once 'config.php';
 
 class CurlRequest {
+    private const DEFAULT_TIMEOUT_MS = 40000;
     private $url;
     private $headers = [];
     private $timeout = null;
@@ -11,7 +12,7 @@ class CurlRequest {
     public function __construct($url) {
         global $request_exec_timeout;
         $this->url = $url;
-        $this->timeout = $request_exec_timeout ?: 15000;
+        $this->timeout = $request_exec_timeout ?: self::DEFAULT_TIMEOUT_MS;
     }
 
     public function setTimeout($seconds) {
@@ -48,7 +49,7 @@ class CurlRequest {
     }
 
     private function execute($method, $data = null) {
-        $this->timeout = !$this->timeout  ?  15000 : $this->timeout;
+        $this->timeout = !$this->timeout ? self::DEFAULT_TIMEOUT_MS : $this->timeout;
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $this->url);
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, strtoupper($method));
