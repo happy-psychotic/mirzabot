@@ -843,7 +843,8 @@ if ($text == $text_bot_var['btn_keyboard']['buy'] && $setting['active_step_note'
         step("home", $from_id);
         return;
     }
-    if ($marzban_list_get['MethodUsername'] == $textbotlang['users']['customusername'] || $marzban_list_get['MethodUsername'] == "نام کاربری دلخواه + عدد رندوم") {
+    $isCustomVolumeAutoUsername = $user['step'] == "getvolumecustomuser";
+    if (!$isCustomVolumeAutoUsername && ($marzban_list_get['MethodUsername'] == $textbotlang['users']['customusername'] || $marzban_list_get['MethodUsername'] == "نام کاربری دلخواه + عدد رندوم")) {
         if (!preg_match('~(?!_)^[a-z][a-z\d_]{2,32}(?<!_)$~i', $text)) {
             sendmessage($from_id, $textbotlang['users']['invalidusername'], $backuser, 'HTML');
             return;
@@ -852,11 +853,13 @@ if ($text == $text_bot_var['btn_keyboard']['buy'] && $setting['active_step_note'
             $code_product = $userdate['code_product'];
         }
     } else {
-        $code_product = $dataget[1] ?? ($userdate['code_product'] ?? null);
-        if ($code_product === null) {
-            sendmessage($from_id, "❌ خطایی در هنگام خرید رخ داده لطفا مراحل را از اول طی کنید", $keyboard, 'html');
-            step("home", $from_id);
-            return;
+        if (!$isCustomVolumeAutoUsername) {
+            $code_product = $dataget[1] ?? ($userdate['code_product'] ?? null);
+            if ($code_product === null) {
+                sendmessage($from_id, "❌ خطایی در هنگام خرید رخ داده لطفا مراحل را از اول طی کنید", $keyboard, 'html');
+                step("home", $from_id);
+                return;
+            }
         }
     }
     if (!in_array($user['step'], ["endstepuserscustom", "getvolumecustomuser"])) {
