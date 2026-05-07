@@ -872,6 +872,22 @@ function normalizeConfigLinks($configs)
         }
 
         if (is_string($config)) {
+            $config = trim($config);
+            if ($config === '') {
+                continue;
+            }
+
+            if (!preg_match('/^[a-z][a-z0-9+\-.]*:\/\//i', $config) && isBase64($config)) {
+                $decodedConfig = base64_decode($config, true);
+                if ($decodedConfig !== false && preg_match('/^[\x09\x0A\x0D\x20-\x7E\x{0080}-\x{FFFF}]+$/u', $decodedConfig)) {
+                    $decodedLines = preg_split('/\r\n|\r|\n/', trim($decodedConfig));
+                    foreach (normalizeConfigLinks($decodedLines) as $decodedLine) {
+                        $normalizedConfigs[] = $decodedLine;
+                    }
+                    continue;
+                }
+            }
+
             $normalizedConfigs[] = rewriteProxyConfigHost($config);
         } else {
             $normalizedConfigs[] = $config;
@@ -2210,6 +2226,10 @@ function formatSubscriptionLinkForDelivery($sub_link)
 }
 function formatConfigLinksForDelivery($configs)
 {
+    if (!is_array($configs)) {
+        $configs = [$configs];
+    }
+    $configs = normalizeConfigLinks($configs);
     if (!is_array($configs)) {
         $configs = [$configs];
     }
