@@ -15,24 +15,6 @@ $text_panel_admin_login_template = "💎 | Version Bot: $version
 if (!in_array($from_id, $admin_ids))
     return;
 
-function syncResellerBotBalance(string $userId, int $newBalance): void
-{
-    $botsaz = select("botsaz", "*", "bot_token", select("user", "bottype", "id", $userId, "select")['bottype'] ?? '', "select");
-    if (!$botsaz) {
-        return;
-    }
-    $jsonPath = getcwd() . "/vpnbot/{$botsaz['id_user']}{$botsaz['username']}/data/{$userId}/{$userId}.json";
-    if (!is_file($jsonPath)) {
-        return;
-    }
-    $data = json_decode(file_get_contents($jsonPath), true);
-    if (!is_array($data)) {
-        return;
-    }
-    $data['Balance'] = $newBalance;
-    file_put_contents($jsonPath, json_encode($data));
-}
-
 $domainhostsEscaped = htmlspecialchars($domainhosts, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
 $miniAppInstructionText = <<<HTML
@@ -5337,7 +5319,6 @@ $text_expie_agent
     $Balance_user = select("user", "*", "id", $user['Processing_value'], "select");
     $Balance_add_user = $Balance_user['Balance'] + $text;
     update("user", "Balance", $Balance_add_user, "id", $user['Processing_value']);
-    syncResellerBotBalance($user['Processing_value'], $Balance_add_user);
     $heibalanceuser = number_format($text, 0);
     $textadd = "💎 کاربر عزیز مبلغ $heibalanceuser تومان به موجودی کیف پول تان اضافه گردید.";
     sendmessage($user['Processing_value'], $textadd, null, 'HTML');
@@ -5393,7 +5374,6 @@ $text_expie_agent
     $Balance_user = select("user", "*", "id", $user['Processing_value'], "select");
     $Balance_add_user = $Balance_user['Balance'] - $text;
     update("user", "Balance", $Balance_add_user, "id", $user['Processing_value']);
-    syncResellerBotBalance($user['Processing_value'], $Balance_add_user);
     $lowbalanceuser = number_format($text, 0);
     $textkam = "❌ کاربر عزیز مبلغ $lowbalanceuser تومان از  موجودی کیف پول تان کسر گردید.";
     sendmessage($user['Processing_value'], $textkam, null, 'HTML');
@@ -5836,7 +5816,6 @@ $iduser  در ربات  رفع مسدود گردید
     $Balance_add_user = $Balance_user['Balance'] + $text;
     $balanceusers = number_format($text, 0);
     update("user", "Balance", $Balance_add_user, "id", $Payment_report['id_user']);
-    syncResellerBotBalance($Payment_report['id_user'], $Balance_add_user);
     $textadd = "💎 کاربر عزیز مبلغ $balanceusers تومان به موجودی کیف پول تان اضافه گردید.";
     sendmessage($Payment_report['id_user'], $textadd, null, 'HTML');
     $text_report = "تایید رسید کارت به کارت و افزایش دستی موجودی توسط ادمین
