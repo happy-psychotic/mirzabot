@@ -233,6 +233,11 @@ if (strpos($text, "/start ") !== false && $user['step'] != "gettextSystemMessage
                 return;
             }
             $user = select("user", "*", "id", $from_id, "select");
+            $inviterUser = select("user", "*", "id", $affiliatesid, "select");
+            if ($inviterUser && $inviterUser['affiliates'] == $from_id) {
+                sendmessage($from_id, $textbotlang['users']['affiliates']['invalidaffiliates'], null, 'html');
+                return;
+            }
             update("user", "affiliates", $affiliatesid, "id", $from_id);
             if (intval($user['affiliates']) != 0) {
                 sendmessage($from_id, $textbotlang['users']['affiliates']['affiliateedago'], null, 'html');
