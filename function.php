@@ -1034,11 +1034,9 @@ function DirectPayment($order_id, $image = 'images.jpg')
             ]
         ]);
         $output_config_link = "";
-        $config = "";
+        $config_links_text = "";
         if ($marzban_list_get['config'] == "onconfig" && is_array($dataoutput['configs'])) {
-            foreach ($dataoutput['configs'] as $link) {
-                $config .= "\n" . $link;
-            }
+            $config_links_text = formatConfigLinksForDelivery($dataoutput['configs']);
         }
         $output_config_link = $marzban_list_get['sublink'] == "onsublink" ? $dataoutput['subscription_url'] : "";
         $datatextbot['textafterpay'] = $marzban_list_get['type'] == "Manualsale" ? $datatextbot['textmanual'] : $datatextbot['textafterpay'];
@@ -1051,8 +1049,8 @@ function DirectPayment($order_id, $image = 'images.jpg')
         $textcreatuser = str_replace('{location}', $marzban_list_get['name_panel'], $textcreatuser);
         $textcreatuser = str_replace('{day}', $get_invoice['Service_time'], $textcreatuser);
         $textcreatuser = str_replace('{volume}', $get_invoice['Volume'], $textcreatuser);
-        $textcreatuser = str_replace('{config}', "<code>{$output_config_link}</code>", $textcreatuser);
-        $textcreatuser = str_replace('{links}', $config, $textcreatuser);
+        $textcreatuser = str_replace('{config}', formatSubscriptionLinkForDelivery($output_config_link), $textcreatuser);
+        $textcreatuser = str_replace('{links}', $config_links_text, $textcreatuser);
         $textcreatuser = str_replace('{links2}', "{$output_config_link}", $textcreatuser);
         if ($marzban_list_get['type'] == "Manualsale" || $marzban_list_get['type'] == "ibsng" || $marzban_list_get['type'] == "mikrotik") {
             $textcreatuser = str_replace('{password}', $dataoutput['subscription_url'], $textcreatuser);
@@ -2115,6 +2113,35 @@ function check_active_btn($keyboard, $text_var)
     }
     return $status;
 }
+function hasUsableHelpContent()
+{
+    if (getenv('MIRZABOT_TESTING') === '1') {
+        $testStatus = getenv('MIRZABOT_TEST_HELP_CONTENT_STATUS');
+        if (is_string($testStatus) && $testStatus !== '') {
+            return strtolower(trim($testStatus)) === 'on';
+        }
+    }
+
+    try {
+        global $pdo, $setting;
+        if (!isset($pdo) || !($pdo instanceof PDO)) {
+            return false;
+        }
+
+        $stmt = $pdo->query("SELECT COUNT(*) FROM help WHERE TRIM(COALESCE(name_os, '')) <> '' AND (TRIM(COALESCE(Description_os, '')) <> '' OR TRIM(COALESCE(Media_os, '')) <> '')");
+        if ($stmt !== false && intval($stmt->fetchColumn()) > 0) {
+            return true;
+        }
+
+        if (isset($setting['linkappstatus']) && strval($setting['linkappstatus']) === "1") {
+            $stmt = $pdo->query("SELECT COUNT(*) FROM app WHERE TRIM(COALESCE(name, '')) <> '' AND TRIM(COALESCE(link, '')) <> ''");
+            return $stmt !== false && intval($stmt->fetchColumn()) > 0;
+        }
+    } catch (Throwable $exception) {
+    }
+
+    return false;
+}
 function CreatePaymentNv($invoice_id, $amount)
 {
     global $domainhosts;
@@ -2169,10 +2196,59 @@ function isBase64($string)
     }
     return false;
 }
+function formatTelegramCode($value)
+{
+    return "<code>" . htmlspecialchars((string)$value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</code>";
+}
+function formatSubscriptionLinkForDelivery($sub_link)
+{
+    $sub_link = trim((string)$sub_link);
+    if ($sub_link === '') {
+        return '';
+    }
+    return "ساب لینک:\n" . formatTelegramCode($sub_link);
+}
+function formatConfigLinksForDelivery($configs)
+{
+    if (!is_array($configs)) {
+        $configs = [$configs];
+    }
+
+    $messages = [];
+    foreach ($configs as $config) {
+        $config = trim((string)$config);
+        if ($config === '') {
+            continue;
+        }
+
+        $encodedConfig = base64_encode($config . "\n");
+        $messages[] = "لینک رمز نگاری شده (پیشنهادی)\n"
+            . formatTelegramCode($encodedConfig)
+            . "\n\nاپ آیفون : streisand یا nvp\n\nلینک :\n"
+            . formatTelegramCode($config);
+    }
+
+    return implode("\n\n", $messages);
+}
+function formatServiceLinksForDelivery($configs, $sub_link = '')
+{
+    $parts = [];
+    $subscriptionText = formatSubscriptionLinkForDelivery($sub_link);
+    if ($subscriptionText !== '') {
+        $parts[] = $subscriptionText;
+    }
+
+    $configText = formatConfigLinksForDelivery($configs);
+    if ($configText !== '') {
+        $parts[] = $configText;
+    }
+
+    return implode("\n\n", $parts);
+}
 function sendMessageService($panel_info, $config, $sub_link, $username_service, $reply_markup, $caption, $invoice_id, $user_id = null, $image = 'images.jpg')
 {
     global $setting, $from_id;
-    if (!check_active_btn($setting['keyboardmain'], "text_help"))
+    if (!check_active_btn($setting['keyboardmain'], "text_help") || !hasUsableHelpContent())
         $reply_markup = null;
     $user_id = $user_id == null ? $from_id : $user_id;
     $STATUS_SEND_MESSAGE_PHOTO = $panel_info['config'] == "onconfig" && count($config) != 1 ? false : true;

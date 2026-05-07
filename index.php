@@ -1336,7 +1336,7 @@ $textconnect
             telegram('sendphoto', [
                 'chat_id' => $from_id,
                 'photo' => new CURLFile($urlimage),
-                'caption' => "<code>{$DataUserOut['links'][$i]}</code>",
+                'caption' => formatConfigLinksForDelivery([$DataUserOut['links'][$i]]),
                 'parse_mode' => "HTML",
             ]);
             unlink($urlimage);
@@ -1350,7 +1350,7 @@ $textconnect
     telegram('sendphoto', [
         'chat_id' => $from_id,
         'photo' => new CURLFile($urlimage),
-        'caption' => "<code>{$DataUserOut['links'][$dataget[2]]}</code>",
+        'caption' => formatConfigLinksForDelivery([$DataUserOut['links'][$dataget[2]]]),
         'parse_mode' => "HTML",
     ]);
     unlink($urlimage);
@@ -3237,12 +3237,10 @@ if ($user['step'] == "createusertest" || preg_match('/locationtest_(.*)/', $data
         return;
     }
     $output_config_link = "";
-    $config = "";
+    $config_links_text = "";
     $output_config_link = $marzban_list_get['sublink'] == "onsublink" ? $dataoutput['subscription_url'] : "";
     if ($marzban_list_get['config'] == "onconfig" && is_array($dataoutput['configs'])) {
-        for ($i = 0; $i < count($dataoutput['configs']); ++$i) {
-            $output_config_link .= "\n" . $dataoutput['configs'][$i];
-        }
+        $config_links_text = formatConfigLinksForDelivery($dataoutput['configs']);
     }
 
     $usertestinfo = json_encode([
@@ -3269,8 +3267,8 @@ if ($user['step'] == "createusertest" || preg_match('/locationtest_(.*)/', $data
     $textcreatuser = str_replace('{location}', $marzban_list_get['name_panel'], $textcreatuser);
     $textcreatuser = str_replace('{day}', $marzban_list_get['time_usertest'], $textcreatuser);
     $textcreatuser = str_replace('{volume}', $marzban_list_get['val_usertest'], $textcreatuser);
-    $textcreatuser = str_replace('{config}', "<code>{$output_config_link}</code>", $textcreatuser);
-    $textcreatuser = str_replace('{links}', $config, $textcreatuser);
+    $textcreatuser = str_replace('{config}', formatSubscriptionLinkForDelivery($output_config_link), $textcreatuser);
+    $textcreatuser = str_replace('{links}', $config_links_text, $textcreatuser);
     $textcreatuser = str_replace('{links2}', $output_config_link, $textcreatuser);
     if ($marzban_list_get['type'] == "ibsng" || $marzban_list_get['type'] == "mikrotik") {
         $textcreatuser = str_replace('{password}', $dataoutput['subscription_url'], $textcreatuser);
@@ -3317,7 +3315,7 @@ if ($user['step'] == "createusertest" || preg_match('/locationtest_(.*)/', $data
         ]);
     }
 } elseif ($text == $datatextbot['text_help'] || $datain == "helpbtn" || $datain == "helpbtns" || $text == "/help" || $text == "help") {
-    if (!check_active_btn($setting['keyboardmain'], "text_help")) {
+    if (!check_active_btn($setting['keyboardmain'], "text_help") || !hasUsableHelpContent()) {
         sendmessage($from_id, $textbotlang['users']['help']['disablehelp'], null, 'HTML');
         return;
     }
@@ -4275,12 +4273,10 @@ $textinvite
     }
     update("invoice", "Status", "active", "username", $username_ac);
     $output_config_link = "";
-    $config = "";
+    $config_links_text = "";
     $output_config_link = $marzban_list_get['sublink'] == "onsublink" ? $dataoutput['subscription_url'] : "";
     if ($marzban_list_get['config'] == "onconfig" && is_array($dataoutput['configs'])) {
-        foreach ($dataoutput['configs'] as $link) {
-            $config .= "\n" . $link;
-        }
+        $config_links_text = formatConfigLinksForDelivery($dataoutput['configs']);
     }
     $Shoppinginfo = json_encode($Shoppinginfo);
     $datatextbot['textafterpay'] = $marzban_list_get['type'] == "Manualsale" ? $datatextbot['textmanual'] : $datatextbot['textafterpay'];
@@ -4295,8 +4291,8 @@ $textinvite
     $textcreatuser = str_replace('{location}', $marzban_list_get['name_panel'], $textcreatuser);
     $textcreatuser = str_replace('{day}', $info_product['Service_time'], $textcreatuser);
     $textcreatuser = str_replace('{volume}', $info_product['Volume_constraint'], $textcreatuser);
-    $textcreatuser = str_replace('{config}', "<code>{$output_config_link}</code>", $textcreatuser);
-    $textcreatuser = str_replace('{links}', $config, $textcreatuser);
+    $textcreatuser = str_replace('{config}', formatSubscriptionLinkForDelivery($output_config_link), $textcreatuser);
+    $textcreatuser = str_replace('{links}', $config_links_text, $textcreatuser);
     $textcreatuser = str_replace('{links2}', $output_config_link, $textcreatuser);
     if (intval($info_product['Volume_constraint']) == 0) {
         $textcreatuser = str_replace('گیگابایت', "", $textcreatuser);
@@ -4868,13 +4864,11 @@ $textonebuy
         $stmt->bind_param("sssssssssss", $from_id, $randomString, $username_acc, $date, $user['Processing_value'], $info_product['name_product'], $info_product['price_product'], $info_product['Volume_constraint'], $info_product['Service_time'], $Status, $notifctions);
         $stmt->execute();
         $stmt->close();
-        $config = "";
+        $config_links_text = "";
         $output_config_link = $marzban_list_get['sublink'] == "onsublink" ? $dataoutput['subscription_url'] : "";
         if ($marzban_list_get['config'] == "onconfig") {
             if (is_array($dataoutput['configs'])) {
-                foreach ($dataoutput['configs'] as $configs) {
-                    $config .= $configs;
-                }
+                $config_links_text = formatConfigLinksForDelivery($dataoutput['configs']);
             }
         }
         $datatextbot['textafterpay'] = $marzban_list_get['type'] == "Manualsale" ? $datatextbot['textmanual'] : $datatextbot['textafterpay'];
@@ -4894,8 +4888,8 @@ $textonebuy
         $textcreatuser = str_replace('{location}', $marzban_list_get['name_panel'], $textcreatuser);
         $textcreatuser = str_replace('{day}', $info_product['Service_time'], $textcreatuser);
         $textcreatuser = str_replace('{volume}', $info_product['Volume_constraint'], $textcreatuser);
-        $textcreatuser = str_replace('{config}', "<code>{$output_config_link}</code>", $textcreatuser);
-        $textcreatuser = str_replace('{links}', "<code>{$config}</code>", $textcreatuser);
+        $textcreatuser = str_replace('{config}', formatSubscriptionLinkForDelivery($output_config_link), $textcreatuser);
+        $textcreatuser = str_replace('{links}', $config_links_text, $textcreatuser);
         $textcreatuser = str_replace('{links2}', "{$output_config_link}", $textcreatuser);
         sendMessageService($marzban_list_get, $dataoutput['configs'], $output_config_link, $dataoutput['username'], $Shoppinginfo, $textcreatuser, $randomString);
     }

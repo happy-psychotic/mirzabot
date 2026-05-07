@@ -108,9 +108,13 @@ if (!function_exists('shouldShowMainMenuButton')) {
 
             case 'text_help':
                 if (isset($setting['linkappstatus']) && strval($setting['linkappstatus']) === "1") {
-                    return true;
+                    $stmt = $pdo->prepare("SELECT COUNT(*) FROM app WHERE TRIM(COALESCE(name, '')) <> '' AND TRIM(COALESCE(link, '')) <> ''");
+                    $stmt->execute();
+                    if (intval($stmt->fetchColumn()) > 0) {
+                        return true;
+                    }
                 }
-                $stmt = $pdo->prepare("SELECT COUNT(*) FROM help");
+                $stmt = $pdo->prepare("SELECT COUNT(*) FROM help WHERE TRIM(COALESCE(name_os, '')) <> '' AND (TRIM(COALESCE(Description_os, '')) <> '' OR TRIM(COALESCE(Media_os, '')) <> '')");
                 $stmt->execute();
                 return intval($stmt->fetchColumn()) > 0;
 
@@ -126,6 +130,7 @@ if (!function_exists('shouldShowMainMenuButton')) {
         }
     }
 }
+
 $admin_idss = select("admin", "*", "id_admin", $from_id,"count");
 $temp_addtional_key = [];
 $keyboardLayout = json_decode($setting['keyboardmain'], true);
