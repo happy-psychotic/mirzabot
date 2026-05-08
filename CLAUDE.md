@@ -10,67 +10,130 @@ Mirzabot is a PHP Telegram bot for selling VPN services. It includes:
 - Cron-driven background jobs under `/cronbot`
 - Reseller bot instances under `/vpnbot/Default/` (template) and `/vpnbot/<botname>/` (live copies)
 
-## CRITICAL: Files That Must Never Be Overwritten
-These files are server-specific runtime/config files. **Never overwrite them during deploy:**
-- `config.php` on any live server — contains real DB credentials and bot tokens
-- `vpnbot/*/config.php` — each reseller bot has its own config
-- `error_log`, `log.txt`, `cookie.txt`, `api/log.txt`
-- `storage/` directory
-- `sub/cookie.txt`
-- Any file matched by `.gitignore`
+---
 
-The repo `config.php` is a placeholder template. The real one lives only on the server.
+## ⛔ DEPLOY RULES — NON-NEGOTIABLE
 
-## Deploy Rules — Read Before Every Deploy
-1. **Always make changes locally first**, then deploy. Never edit files directly on the server unless it is an emergency outage.
-2. **Always use the deploy script** at `scripts/deploy_antibot_from_local.sh` — it uses `rsync` and explicitly preserves `config.php` and runtime files.
-3. **Never run `git pull` on the live server** — the server has local modifications (config, runtime data) that will conflict. Treat the server as a deploy target, not a git client.
-4. **Never run `git stash` + `git pull` on the server** — this can expose the template `config.php` and break the bot.
-5. Before high-risk changes (schema, installer, panel adapters), do a manual backup of `/var/www/mirza_pro`.
-6. After deploying to `vpnbot/Default/`, check if other reseller bots (`vpnbot/*_bot/`) need the same file — they usually share identical copies.
+### The only safe deploy method is scp
+Push specific changed files from local to server using `scp`:
+```bash
+scp local/file.php antibot:/var/www/mirza_pro/file.php
+```
+For reseller bots, deploy to all instances:
+```bash
+for dir in Default 383340509Red_v2ray_bot 7356499248anti_blocks_bot 96813594Anti_filternetbot update; do
+  scp vpnbot/Default/admin.php antibot:/var/www/mirza_pro/vpnbot/$dir/admin.php
+done
+```
+
+### NEVER run any git command on the live server
+No `git pull`, `git stash`, `git checkout`, `git reset`, `git merge` — nothing.
+The server is a **deploy target only**, not a git client.
+The server has local modifications (config, runtime data) that will always conflict with git operations.
+Running git on the server WILL overwrite real config files with template placeholders and break all bots.
+
+### NEVER use rsync --delete toward the server
+It will wipe server-local files that are not in the local repo (configs, runtime data).
+
+### Always change locally first, then deploy
+Never make changes directly on the server. Local repo is the source of truth.
+
+---
+
+## ⛔ FILES THAT MUST NEVER BE OVERWRITTEN ON SERVER
+
+These are server-local files. They are NOT in git. Never scp or rsync them from local to server:
+
+| File | Why |
+|------|-----|
+| `/var/www/mirza_pro/config.php` | Real DB credentials + bot token |
+| `/var/www/mirza_pro/vpnbot/*/config.php` | Each reseller bot's own credentials |
+| `error_log`, `log.txt`, `cookie.txt` | Runtime artifacts |
+| `cronbot/error_log`, `cronbot/log.txt` | Runtime artifacts |
+| `api/log.txt`, `sub/cookie.txt` | Runtime artifacts |
+| `storage/` | Runtime storage |
+
+The repo's `config.php` is a **placeholder template** with `{database_url}` etc. It must never reach the server.
+
+---
 
 ## Reseller Bots
-- Template: `/vpnbot/Default/`
-- Live instances on VPS: `383340509Red_v2ray_bot`, `7356499248anti_blocks_bot`, `96813594Anti_filternetbot`
-- All instances share the same `admin.php` and `index.php` — when you update `Default/`, deploy to all instances.
-- Deploy with: `scp vpnbot/Default/admin.php antibot:/var/www/mirza_pro/vpnbot/<name>/admin.php`
+
+- Template (tracked in git): `vpnbot/Default/`
+- Also tracked: `vpnbot/update/` — used for new bot installs
+- Live instances on VPS (NOT in git, gitignored):
+  - `383340509Red_v2ray_bot`
+  - `7356499248anti_blocks_bot`
+  - `96813594Anti_filternetbot`
+
+When changing `vpnbot/Default/admin.php` or `vpnbot/Default/index.php`:
+1. Also apply to `vpnbot/update/` (they stay in sync)
+2. Deploy to all 4 live instances via `scp`
+3. Run `php -l` on each deployed file
+
+---
 
 ## SSH Alias
 - Production VPS: `ssh antibot`
 - App path: `/var/www/mirza_pro`
 
+---
+
 ## Key Files
 - `index.php` — main bot webhook entry
 - `admin.php` — all admin flows (large, stateful)
-- `keyboard.php` — keyboard definitions
+- `keyboard.php` — keyboard button layout and filtering
 - `function.php` — core helper library
 - `panels.php` — VPN panel abstraction (`ManagePanel` class)
 - `table.php` — DB schema and migrations
 - `text.json` — bot text strings (also overridden by `textbot` DB table)
-- `AGENTS.md` — detailed architecture runbook (read this for deep context)
+- `AGENTS.md` — full architecture runbook (read for deep context)
 
-## .gitignore — Important Patterns
-```
-/config.php.bak
-/vpnbot/[0-9]*/
-/vpnbot/*_bot/
-/error_log
-/log.txt
-/storage/
-```
-Live reseller bot folders are gitignored — do not try to track them.
+---
 
 ## Before Changing Code
-- Bot text: check if it comes from `text.json`, the `textbot` DB table, or hardcoded Persian strings.
+- Bot text: check if it comes from `text.json`, `textbot` DB table, or hardcoded Persian strings.
 - Admin buttons/flows: changes to `admin.php` affect both main and reseller bots — check both.
+- Keyboard changes: `keyboard.php` controls which buttons show and when — changes affect all users.
 - Panel integration: inspect `panels.php` + the specific adapter file + relevant invoice/product fields.
 - Cron behavior: inspect `cronbot/` scripts + `function.php` + `install.sh`.
 - Schema changes: add migration-safe logic to `table.php`.
 
+---
+
+## Before Deploying
+1. `php -l` every changed PHP file locally
+2. Identify exactly which files changed — only deploy those files
+3. Use `scp` per file, not rsync toward server
+4. After deploying, run `php -l` on the server copy to confirm
+5. Check `tail -5 /var/www/mirza_pro/error_log` for new fatal errors
+
+---
+
+## .gitignore Key Patterns
+```
+/config.php.bak
+/vpnbot/[0-9]*/          ← live reseller bot folders, never tracked
+/vpnbot/*_bot/           ← live reseller bot folders, never tracked
+/vpnbot/Default/config.php
+/vpnbot/update/config.php
+/error_log
+/cronbot/error_log
+/log.txt
+/storage/
+/docs/
+/scripts/
+/tests/
+```
+
+---
+
 ## Testing
 - Run `php -l <file>` on every changed PHP file before deploying.
-- Full automated tests are not required for every change. They are required for: business flows, panel adapters, shared helpers, schema/default data, auth/security, payment/invoice state, subscription/config output, reseller bot flows.
+- Automated tests required for: business flows, panel adapters, shared helpers, schema changes, auth/security, payment/invoice state, subscription/config output, reseller bot flows.
 - See `docs/testing.md` for the full testing guide.
+
+---
 
 ## Communication
 - Always respond in English only.
