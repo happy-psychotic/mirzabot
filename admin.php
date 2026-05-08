@@ -3897,12 +3897,36 @@ $caption";
             'parse_mode' => "HTML"
         ]);
     }
-} elseif ($datain == "searchuser") {
-    sendmessage($from_id, $textbotlang['Admin']['ManageUser']['GetIdUserunblock'], $backadmin, 'HTML');
+} elseif ($datain == "searchuser" || $text == "🔍 جستجو کاربر") {
+    $keyboardSearchUser = json_encode([
+        'keyboard' => [
+            [['text' => "👤 انتخاب از مخاطبین", 'request_user' => ['request_id' => 1, 'user_is_bot' => false]]],
+            [['text' => $textbotlang['users']['backbtn']]],
+        ],
+        'resize_keyboard' => true,
+        'one_time_keyboard' => true,
+    ]);
+    sendmessage($from_id, "🔍 شناسه کاربر را ارسال کنید:\n\n• آیدی عددی (مثال: 123456789)\n• یوزرنیم تلگرام (مثال: @username)\n• یا از دکمه زیر کاربر را انتخاب کنید", $keyboardSearchUser, 'HTML');
     step('show_info', $from_id);
 } elseif ($user['step'] == "show_info" || preg_match('/manageuser_(\w+)/', $datain, $dataget) || preg_match('/updateinfouser_(\w+)/', $datain, $dataget) || strpos($text, "/user ") !== false || strpos($text, "/id ") !== false) {
     if ($user['step'] == "show_info") {
-        $id_user = $text;
+        if ($contact_id != 0) {
+            $id_user = strval($contact_id);
+        } elseif (isset($update['message']['user_shared']['user_id'])) {
+            $id_user = strval($update['message']['user_shared']['user_id']);
+        } elseif (strpos($text, '@') === 0) {
+            $search_username = ltrim($text, '@');
+            $found = $pdo->prepare("SELECT id FROM user WHERE username = ? LIMIT 1");
+            $found->execute([$search_username]);
+            $id_user = $found->fetchColumn();
+            if (!$id_user) {
+                sendmessage($from_id, "❌ کاربری با این یوزرنیم پیدا نشد.", $keyboardadmin, 'HTML');
+                step('home', $from_id);
+                return;
+            }
+        } else {
+            $id_user = $text;
+        }
     } elseif (explode(" ", $text)[0] == "/user") {
         $id_user = explode(" ", $text)[1];
     } elseif (explode(" ", $text)[0] == "/id") {
@@ -3937,19 +3961,14 @@ $caption";
             [['text' => $textbotlang['Admin']['ManageUser']['addbalanceuser'], 'callback_data' => "addbalanceuser_" . $id_user], ['text' => $textbotlang['Admin']['ManageUser']['lowbalanceuser'], 'callback_data' => "lowbalanceuser_" . $id_user],],
             [['text' => $textbotlang['Admin']['ManageUser']['banuserlist'], 'callback_data' => "banuserlist_" . $id_user], ['text' => $textbotlang['Admin']['ManageUser']['unbanuserlist'], 'callback_data' => "unbanuserr_" . $id_user]],
             [['text' => $textbotlang['Admin']['ManageUser']['addagent'], 'callback_data' => "addagent_" . $id_user], ['text' => $textbotlang['Admin']['ManageUser']['removeagent'], 'callback_data' => "removeagent_" . $id_user]],
-            [['text' => $textbotlang['Admin']['ManageUser']['confirmnumber'], 'callback_data' => "confirmnumber_" . $id_user]],
-            [['text' => "🎁 درصد تخفیف", 'callback_data' => "Percentlow_" . $id_user], ['text' => "✍️ ارسال پیام به کاربر", 'callback_data' => "sendmessageuser_" . $id_user]],
+            [['text' => "🎁 درصد تخفیف", 'callback_data' => "Percentlow_" . $id_user]],
             [['text' => $textbotlang['Admin']['ManageUser']['vieworderuser'], 'callback_data' => "vieworderuser_" . $id_user]],
             [['text' => "👥 زیرمجموعه های کاربر", 'callback_data' => "affiliates-" . $id_user]],
             [['text' => "🔄 خارج کردن از زیرمجموعه", 'callback_data' => "removeaffiliate-" . $id_user], ['text' => "🔄 حذف زیرمجموعه های کاربر", 'callback_data' => "removeaffiliateuser-" . $id_user]],
-            [['text' => "💳 فعالسازی شماره کارت", 'callback_data' => "showcarduser-" . $id_user]],
-            [['text' => "احراز هویت کاربر", 'callback_data' => "verify_" . $id_user], ['text' => "عدم احراز کاربر", 'callback_data' => "unverify-" . $id_user]],
-            [['text' => "💳  غیرفعالسازی شماره کارت", 'callback_data' => "carduserhide-" . $id_user]],
-            [['text' => "🛒 افزودن سفارش", 'callback_data' => "addordermanualـ" . $id_user], ['text' => "➕ محدودیت اکانت تست", 'callback_data' => "limitusertest_" . $id_user]],
-            [['text' => $textbotlang['Admin']['ManageUser']['viewpaymentuser'], 'callback_data' => "viewpaymentuser_" . $id_user], ['text' => "انتقال حساب کاربری ", 'callback_data' => "transferaccount_" . $id_user]],
+            [['text' => "🛒 افزودن سفارش", 'callback_data' => "addordermanualـ" . $id_user]],
+            [['text' => $textbotlang['Admin']['ManageUser']['viewpaymentuser'], 'callback_data' => "viewpaymentuser_" . $id_user]],
             [['text' => "💡 خاموش کردن اکانت", 'callback_data' => "disableconfig-" . $id_user], ['text' => "💡 روشن کردن اکانت", 'callback_data' => "activeconfig-" . $id_user]],
-            [['text' => "📑 احراز عضویت کانال", 'callback_data' => "confirmchannel-" . $id_user], ['text' => "0️⃣ صفر کردن موجودی", 'callback_data' => "zerobalance-" . $id_user]],
-            [['text' => "🕚 وضعیت ارسال پیام های کرون", 'callback_data' => "statuscronuser-" . $id_user]],
+            [['text' => "0️⃣ صفر کردن موجودی", 'callback_data' => "zerobalance-" . $id_user]],
         ]
     ];
     if ($user['agent'] == "n2")
@@ -4653,11 +4672,7 @@ $text_expie_agent
                 ['text' => "لیست کل کاربران", 'callback_data' => "alllistusers"],
             ],
             [
-                ['text' => "🛍 جستجو سفارش", 'callback_data' => "searchorder"],
                 ['text' => "👥 شارژ همگانی", 'callback_data' => "balanceaddall"],
-            ],
-            [
-                ['text' => "🔍 جستجو کاربر", 'callback_data' => "searchuser"],
                 ['text' => "📨 بخش ارسال پیام", 'callback_data' => "systemsms"],
             ],
             [
