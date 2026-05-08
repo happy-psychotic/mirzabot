@@ -121,7 +121,6 @@ When changing `vpnbot/Default/admin.php` or `vpnbot/Default/index.php`:
 /log.txt
 /storage/
 /docs/
-/tests/
 ```
 
 ---

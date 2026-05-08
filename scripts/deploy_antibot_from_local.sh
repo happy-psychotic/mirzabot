@@ -32,7 +32,6 @@ RSYNC_EXCLUDES=(
   --exclude 'vpnbot/[0-9]*/'
   --exclude 'vpnbot/*_bot/'
   --exclude 'docs/'
-  --exclude 'tests/'
   --exclude 'PROJECT_UPDATE.md'
 )
 

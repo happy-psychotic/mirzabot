@@ -27,15 +27,30 @@ for dir in "$VPNBOT_DIR"/*/; do
       ;;
   esac
 
+  # Skip bots with no config.php (incomplete/orphaned installs)
   if [[ ! -f "$dir/config.php" ]]; then
+    echo "  skip $base: no config.php"
+    continue
+  fi
+
+  # Skip bots that have opted out of auto-sync
+  if [[ -f "$dir/.no-sync" ]]; then
+    echo "  skip $base: .no-sync marker present"
     continue
   fi
 
   for file in "${FILES[@]}"; do
-    if [[ -f "$TEMPLATE_DIR/$file" ]]; then
-      cp -f "$TEMPLATE_DIR/$file" "$dir/$file"
+    src="$TEMPLATE_DIR/$file"
+    dst="$dir/$file"
+    if [[ ! -f "$src" ]]; then
+      continue
     fi
+    if [[ -f "$dst" ]] && ! diff -q "$src" "$dst" > /dev/null 2>&1; then
+      echo "  WARNING: $base/$file differs from template — overwriting"
+    fi
+    cp -f "$src" "$dst"
   done
+  echo "  synced $base"
 done
 
 echo "reseller template sync done"

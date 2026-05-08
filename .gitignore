@@ -24,7 +24,6 @@
 /*.png
 /*.jpg
 
-# Docs/tests that are server-local only
+# Server-local only
 /docs/
-/tests/
 /PROJECT_UPDATE.md
