@@ -335,6 +335,35 @@ if ($text == "📞 تنظیم نام کاربری پشتیبانی") {
     sendmessage($from_id, $textinfouser, $keyboardmanage, 'HTML');
     sendmessage($from_id, $textbotlang['users']['selectoption'], $keyboardadmin, 'HTML');
     step('home', $from_id);
+} elseif ($text == "🔎 جستجو سرویس") {
+    sendmessage($from_id, "🔎 نام کاربری سرویس یا لینک کانفیگ را ارسال کنید:", $backadmin, 'html');
+    step('searchservicereseller', $from_id);
+} elseif ($user['step'] == "searchservicereseller") {
+    step('home', $from_id);
+    $searchInput = trim($text);
+    if (preg_match('~^(?:vless|vmess|ss|trojan)://[^#]+#(.+)$~i', $searchInput, $linkMatch)) {
+        $fragment = urldecode($linkMatch[1]);
+        $searchInput = explode('-', $fragment)[0];
+    }
+    $stmt = $pdo->prepare("SELECT * FROM invoice WHERE (username LIKE CONCAT('%', :q, '%') OR note LIKE CONCAT('%', :q2, '%')) AND bottype = :bottype LIMIT 10");
+    $stmt->execute([':q' => $searchInput, ':q2' => $searchInput, ':bottype' => $ApiToken]);
+    if ($stmt->rowCount() == 0) {
+        sendmessage($from_id, "❌ سرویسی یافت نشد.", $keyboardadmin, 'html');
+        return;
+    }
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $ownerUser = select("user", "*", "id", $row['id_user'], "select");
+        $ownerBalance = json_decode(file_get_contents("data/{$row['id_user']}/{$row['id_user']}.json"), true)['Balance'] ?? 0;
+        $ownerBalanceFmt = number_format($ownerBalance);
+        $statusEmoji = $row['status'] == 'active' ? '✅' : '❌';
+        $info = "$statusEmoji نام سرویس: <code>{$row['username']}</code>\n"
+            . "👤 کاربر: <a href='tg://user?id={$row['id_user']}'>{$row['id_user']}</a> @{$ownerUser['username']}\n"
+            . "📦 محصول: {$row['name_product']}\n"
+            . "💰 موجودی کاربر: $ownerBalanceFmt تومان\n"
+            . "🔖 وضعیت: {$row['status']}";
+        sendmessage($from_id, $info, null, 'html');
+    }
+    sendmessage($from_id, "✅ جستجو پایان یافت.", $keyboardadmin, 'html');
 } elseif (preg_match('/addbalanceuser_(\w+)/', $datain, $dataget)) {
     $iduser = $dataget[1];
     update("user", "Processing_value", $iduser, "id", $from_id);
