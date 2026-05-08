@@ -6034,7 +6034,12 @@ n2", $backadmin, 'HTML');
     step('GetusernameconfigAndOrdedrs', $from_id);
 } elseif ($user['step'] == "GetusernameconfigAndOrdedrs" || strpos($text, "/config ") !== false || preg_match('/manageinvoice_(\w+)/', $datain, $datagetr)) {
     if ($user['step'] == "GetusernameconfigAndOrdedrs") {
-        $usernameconfig = $text;
+        // If input is a config link (vless/vmess/ss/trojan), extract the fragment as username
+        if (preg_match('~^(?:vless|vmess|ss|trojan)://[^#]+#(.+)$~i', trim($text), $linkMatch)) {
+            $usernameconfig = urldecode($linkMatch[1]);
+        } else {
+            $usernameconfig = $text;
+        }
         $sql = "SELECT * FROM invoice WHERE username LIKE CONCAT('%', :username, '%') OR note  LIKE CONCAT('%', :notes, '%')";
         $stmt = $pdo->prepare($sql);
         $stmt->bindParam(':username', $usernameconfig, PDO::PARAM_STR);
