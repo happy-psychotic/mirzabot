@@ -6029,14 +6029,15 @@ n2", $backadmin, 'HTML');
     sendmessage($from_id, "تغییرات با موفقیت اعمال شد", $keyboardadmin, 'HTML');
     update("user", "maxbuyagent", $text, "id", $user['Processing_value']);
     step('home', $from_id);
-} elseif ($datain == "searchorder") {
+} elseif ($datain == "searchorder" || $text == "🔍 جستجو سرویس") {
     sendmessage($from_id, $textbotlang['Admin']['order']['vieworderusername'], $backadmin, 'HTML');
     step('GetusernameconfigAndOrdedrs', $from_id);
 } elseif ($user['step'] == "GetusernameconfigAndOrdedrs" || strpos($text, "/config ") !== false || preg_match('/manageinvoice_(\w+)/', $datain, $datagetr)) {
     if ($user['step'] == "GetusernameconfigAndOrdedrs") {
-        // If input is a config link (vless/vmess/ss/trojan), extract the fragment as username
+        // If input is a config link, extract username from fragment (part before first '-')
         if (preg_match('~^(?:vless|vmess|ss|trojan)://[^#]+#(.+)$~i', trim($text), $linkMatch)) {
-            $usernameconfig = urldecode($linkMatch[1]);
+            $fragment = urldecode($linkMatch[1]);
+            $usernameconfig = explode('-', $fragment)[0];
         } else {
             $usernameconfig = $text;
         }

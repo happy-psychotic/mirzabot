@@ -246,6 +246,7 @@ $keyboardadmin = json_encode([
         [['text' => "🤙 بخش پشتیبانی"],['text' => "📚 بخش آموزش"]],
         [['text' => "📬 گزارش ربات"],['text' => "🛠 قابلیت های پنل"]],
         [['text' => "⚙️ تنظیمات عمومی"],['text' => "💵 رسید های تایید نشده"]],
+        [['text' => "🔍 جستجو سرویس"]],
         [['text' => $textbotlang['users']['backbtn']]]
     ],
     'resize_keyboard' => true

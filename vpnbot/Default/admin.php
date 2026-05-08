@@ -342,7 +342,8 @@ if ($text == "📞 تنظیم نام کاربری پشتیبانی") {
     step('home', $from_id);
     $searchInput = trim($text);
     if (preg_match('~^(?:vless|vmess|ss|trojan)://[^#]+#(.+)$~i', $searchInput, $linkMatch)) {
-        $searchInput = urldecode($linkMatch[1]);
+        $fragment = urldecode($linkMatch[1]);
+        $searchInput = explode('-', $fragment)[0];
     }
     $stmt = $pdo->prepare("SELECT * FROM invoice WHERE (username LIKE CONCAT('%', :q, '%') OR note LIKE CONCAT('%', :q2, '%')) AND bottype = :bottype LIMIT 10");
     $stmt->execute([':q' => $searchInput, ':q2' => $searchInput, ':bottype' => $ApiToken]);
