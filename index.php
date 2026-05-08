@@ -486,7 +486,6 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
             'text' => $textbotlang['users']['page']['next'],
             'callback_data' => 'next_page'
         ],
-        ['text' => $textbotlang['users']['search']['title'], 'callback_data' => 'searchservice']
     ];
     $backuser = [
         [
@@ -494,9 +493,6 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
             'callback_data' => 'backuser'
         ]
     ];
-    if ($setting['NotUser'] == "onnotuser") {
-        $keyboardlists['inline_keyboard'][] = [['text' => $textbotlang['users']['page']['notusernameme'], 'callback_data' => 'notusernameme']];
-    }
     $keyboardlists['inline_keyboard'][] = $pagination_buttons;
     $keyboardlists['inline_keyboard'][] = $backuser;
     $keyboard_json = json_encode($keyboardlists);
@@ -564,10 +560,6 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
             'callback_data' => 'backuser'
         ]
     ];
-    $keyboardlists['inline_keyboard'][] = [['text' => $textbotlang['users']['search']['title'], 'callback_data' => 'searchservice']];
-    if ($setting['NotUser'] == "onnotuser") {
-        $keyboardlists['inline_keyboard'][] = [['text' => $textbotlang['users']['page']['notusernameme'], 'callback_data' => 'notusernameme']];
-    }
     $keyboardlists['inline_keyboard'][] = $pagination_buttons;
     $keyboardlists['inline_keyboard'][] = $backuser;
     $keyboard_json = json_encode($keyboardlists);
@@ -632,10 +624,6 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
             'callback_data' => 'backuser'
         ]
     ];
-    $keyboardlists['inline_keyboard'][] = [['text' => $textbotlang['users']['search']['title'], 'callback_data' => 'searchservice']];
-    if ($setting['NotUser'] == "onnotuser") {
-        $keyboardlists['inline_keyboard'][] = [['text' => $textbotlang['users']['page']['notusernameme'], 'callback_data' => 'notusernameme']];
-    }
     $keyboardlists['inline_keyboard'][] = $pagination_buttons;
     $keyboardlists['inline_keyboard'][] = $backuser;
     $keyboard_json = json_encode($keyboardlists);
