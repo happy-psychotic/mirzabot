@@ -8,7 +8,23 @@ DRY_RUN="${DRY_RUN:-0}"
 
 REPO_ROOT="$(git -C "$(dirname "$0")/.." rev-parse --show-toplevel)"
 TMP_DIR="$(mktemp -d)"
-trap 'rm -rf "$TMP_DIR"' EXIT
+LOCK_FILE="/tmp/mirza_deploy.lock"
+
+acquire_lock() {
+  if ! mkdir "$LOCK_FILE" 2>/dev/null; then
+    echo "ERROR: another deploy is already running (lock: $LOCK_FILE)" >&2
+    echo "If no deploy is running, remove the lock manually: rm -rf $LOCK_FILE" >&2
+    exit 1
+  fi
+}
+
+release_lock() {
+  rm -rf "$LOCK_FILE"
+  rm -rf "$TMP_DIR"
+}
+
+trap 'release_lock' EXIT
+acquire_lock
 
 # Only deploy committed code — uncommitted changes are never sent to server
 git -C "$REPO_ROOT" archive "$REF" | tar -x -C "$TMP_DIR"

@@ -5,6 +5,7 @@ require_once __DIR__ . '/Assert.php';
 $script = file_get_contents(dirname(__DIR__, 2) . '/scripts/deploy_antibot_from_local.sh');
 
 assertTrueValue(strpos($script, 'DRY_RUN="${DRY_RUN:-0}"') !== false, 'deploy script should support DRY_RUN');
+assertTrueValue(strpos($script, 'mirza_deploy.lock') !== false, 'deploy script should use a lock file to prevent concurrent deploys');
 assertTrueValue(strpos($script, "--exclude 'config.php'") !== false, 'deploy script should preserve live config.php');
 assertTrueValue(strpos($script, "--exclude 'vpnbot/Default/config.php'") !== false, 'deploy script should preserve vpnbot/Default/config.php');
 assertTrueValue(strpos($script, "--exclude 'vpnbot/update/config.php'") !== false, 'deploy script should preserve vpnbot/update/config.php');
