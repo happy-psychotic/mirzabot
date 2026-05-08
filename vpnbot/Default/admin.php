@@ -338,32 +338,212 @@ if ($text == "📞 تنظیم نام کاربری پشتیبانی") {
 } elseif ($text == "🔎 جستجو سرویس") {
     sendmessage($from_id, "🔎 نام کاربری سرویس یا لینک کانفیگ را ارسال کنید:", $backadmin, 'html');
     step('searchservicereseller', $from_id);
-} elseif ($user['step'] == "searchservicereseller") {
-    step('home', $from_id);
-    $searchInput = trim($text);
-    if (preg_match('~^(?:vless|vmess|ss|trojan)://[^#]+#(.+)$~i', $searchInput, $linkMatch)) {
-        $fragment = urldecode($linkMatch[1]);
-        $searchInput = explode('-', $fragment)[0];
+} elseif ($user['step'] == "searchservicereseller" || preg_match('/manageinvoicereseller_(\w+)/', $datain, $datagetr2)) {
+    if (isset($datagetr2[1])) {
+        $OrderUser = select("invoice", "*", "id_invoice", $datagetr2[1], "select");
+        if (!$OrderUser || $OrderUser['bottype'] !== $ApiToken) {
+            sendmessage($from_id, "❌ سرویسی یافت نشد.", $keyboardadmin, 'html');
+            return;
+        }
+        $results = [$OrderUser];
+    } else {
+        step('home', $from_id);
+        $searchInput = trim($text);
+        if (preg_match('~^(?:vless|vmess|ss|trojan)://[^#]+#(.+)$~i', $searchInput, $linkMatch)) {
+            $fragment = urldecode($linkMatch[1]);
+            $searchInput = explode('-', $fragment)[0];
+        }
+        $stmt = $pdo->prepare("SELECT * FROM invoice WHERE (username LIKE CONCAT('%', :q, '%') OR note LIKE CONCAT('%', :q2, '%')) AND bottype = :bottype LIMIT 10");
+        $stmt->execute([':q' => $searchInput, ':q2' => $searchInput, ':bottype' => $ApiToken]);
+        if ($stmt->rowCount() == 0) {
+            sendmessage($from_id, "❌ سرویسی یافت نشد.", $keyboardadmin, 'html');
+            return;
+        }
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
-    $stmt = $pdo->prepare("SELECT * FROM invoice WHERE (username LIKE CONCAT('%', :q, '%') OR note LIKE CONCAT('%', :q2, '%')) AND bottype = :bottype LIMIT 10");
-    $stmt->execute([':q' => $searchInput, ':q2' => $searchInput, ':bottype' => $ApiToken]);
-    if ($stmt->rowCount() == 0) {
-        sendmessage($from_id, "❌ سرویسی یافت نشد.", $keyboardadmin, 'html');
+    foreach ($results as $OrderUser) {
+        $keyboardlists = ['inline_keyboard' => []];
+        $keyboardlists['inline_keyboard'][] = [
+            ['text' => "♻️ بروزرسانی", 'callback_data' => "manageinvoicereseller_" . $OrderUser['id_invoice']],
+        ];
+        $keyboardlists['inline_keyboard'][] = [
+            ['text' => $textbotlang['Admin']['ManageUser']['removeservice'], 'callback_data' => "removeservicereseller-" . $OrderUser['id_invoice']],
+        ];
+        $keyboardlists['inline_keyboard'][] = [
+            ['text' => $textbotlang['Admin']['ManageUser']['removeserviceandback'], 'callback_data' => "removeserviceresellerandback-" . $OrderUser['id_invoice']],
+        ];
+        if (isset($OrderUser['time_sell'])) {
+            $datatime = jdate('Y/m/d H:i:s', $OrderUser['time_sell']);
+        } else {
+            $datatime = $textbotlang['Admin']['ManageUser']['dataorder'];
+        }
+        if ($OrderUser['name_product'] == "سرویس تست") {
+            $st = $OrderUser['Service_time'] . "ساعته";
+            $sv = $OrderUser['Volume'] . "مگابایت";
+        } else {
+            $st = $OrderUser['Service_time'] . "روزه";
+            $sv = $OrderUser['Volume'] . "گیگابایت";
+        }
+        $text_order = "
+🛒 شماره سفارش  :  <code>{$OrderUser['id_invoice']}</code>
+🛒  وضعیت سفارش در ربات : <code>{$OrderUser['Status']}</code>
+🙍‍♂️ شناسه کاربر : <code>{$OrderUser['id_user']}</code>
+👤 نام کاربری اشتراک :  <code>{$OrderUser['username']}</code>
+📍 موقعیت سرویس :  {$OrderUser['Service_location']}
+🛍 نام محصول :  {$OrderUser['name_product']}
+💰 قیمت پرداختی سرویس : {$OrderUser['price_product']} تومان
+⚜️ حجم سرویس خریداری شده : $sv
+⏳ زمان سرویس خریداری شده : $st
+📆 تاریخ خرید : $datatime
+";
+        $DataUserOut = $ManagePanel->DataUser($OrderUser['Service_location'], $OrderUser['username']);
+        if ($DataUserOut['status'] == "Unsuccessful") {
+            sendmessage($from_id, "کاربر در پنل وجود ندارد", null, 'html');
+            sendmessage($from_id, $text_order, json_encode($keyboardlists), 'HTML');
+            continue;
+        }
+        if ($DataUserOut['online_at'] == "online") {
+            $lastonline = 'آنلاین';
+        } elseif ($DataUserOut['online_at'] == "offline") {
+            $lastonline = 'آفلاین';
+        } else {
+            if (isset($DataUserOut['online_at']) && $DataUserOut['online_at'] !== null) {
+                $lastonline = jdate('Y/m/d H:i:s', strtotime($DataUserOut['online_at']));
+            } else {
+                $lastonline = "متصل نشده";
+            }
+        }
+        $status = $DataUserOut['status'];
+        $status_var = [
+            'active' => $textbotlang['users']['stateus']['active'],
+            'limited' => $textbotlang['users']['stateus']['limited'],
+            'disabled' => $textbotlang['users']['stateus']['disabled'],
+            'expired' => $textbotlang['users']['stateus']['expired'],
+            'on_hold' => $textbotlang['users']['stateus']['on_hold'],
+            'Unknown' => $textbotlang['users']['stateus']['Unknown'],
+            'deactivev' => $textbotlang['users']['stateus']['disabled'],
+        ][$status] ?? $status;
+        $expirationDate = $DataUserOut['expire'] ? jdate('Y/m/d', $DataUserOut['expire']) : $textbotlang['users']['stateus']['Unlimited'];
+        $LastTraffic = $DataUserOut['data_limit'] ? formatBytes($DataUserOut['data_limit']) : $textbotlang['users']['stateus']['Unlimited'];
+        $output = $DataUserOut['data_limit'] - $DataUserOut['used_traffic'];
+        $RemainingVolume = $DataUserOut['data_limit'] ? formatBytes($output) : "نامحدود";
+        $usedTrafficGb = $DataUserOut['used_traffic'] ? formatBytes($DataUserOut['used_traffic']) : $textbotlang['users']['stateus']['Notconsumed'];
+        $timeDiff = $DataUserOut['expire'] - time();
+        $day = $DataUserOut['expire'] ? floor($timeDiff / 86400) . $textbotlang['users']['stateus']['day'] : $textbotlang['users']['stateus']['Unlimited'];
+        $lastupdate = "";
+        if ($DataUserOut['sub_updated_at'] !== null) {
+            $dateTime = new DateTime($DataUserOut['sub_updated_at'], new DateTimeZone('UTC'));
+            $dateTime->setTimezone(new DateTimeZone('Asia/Tehran'));
+            $lastupdate = jdate('Y/m/d H:i:s', $dateTime->getTimestamp());
+        }
+        $limitValue = isset($DataUserOut['data_limit']) ? (float)$DataUserOut['data_limit'] : 0;
+        $usedTrafficValue = isset($DataUserOut['used_traffic']) ? (float)$DataUserOut['used_traffic'] : 0;
+        $Percent = $limitValue > 0 ? round(abs(($limitValue - $usedTrafficValue) * 100 / $limitValue), 2) : 100;
+        $text_order .= "
+ وضعیت سرویس : $status_var
+
+🔋 حجم سرویس : $LastTraffic
+📥 حجم مصرفی : $usedTrafficGb
+💢 حجم باقی مانده : $RemainingVolume ($Percent%)
+
+📅 فعال تا تاریخ : $expirationDate ($day)
+
+لینک اشتراک کاربر :
+<code>{$DataUserOut['subscription_url']}</code>
+
+📶 اخرین زمان اتصال  : $lastonline
+🔄 اخرین زمان آپدیت لینک اشتراک  : $lastupdate
+#️⃣ کلاینت متصل شده :<code>{$DataUserOut['sub_last_user_agent']}</code>";
+        $namestatus = $DataUserOut['status'] == "active" ? '❌ خاموش کردن اکانت' : '💡 روشن کردن اکانت';
+        $keyboardlists['inline_keyboard'][] = [
+            ['text' => $textbotlang['users']['extend']['title'], 'callback_data' => 'extendadmin_' . $OrderUser['id_invoice']],
+            ['text' => $textbotlang['users']['stateus']['config'], 'callback_data' => 'config_' . $OrderUser['id_invoice']],
+        ];
+        $keyboardlists['inline_keyboard'][] = [
+            ['text' => $namestatus, 'callback_data' => 'changestatusreselleradmin_' . $OrderUser['id_invoice']],
+        ];
+        sendmessage($from_id, $text_order, json_encode($keyboardlists), 'HTML');
+    }
+    if (!isset($datagetr2[1])) {
+        sendmessage($from_id, "✅ جستجو پایان یافت.", $keyboardadmin, 'html');
+    }
+} elseif (preg_match('/removeservicereseller-(.*)/', $datain, $dataget)) {
+    $id_invoice = $dataget[1];
+    $info_product = select("invoice", "*", "id_invoice", $id_invoice, "select");
+    if (!$info_product || $info_product['bottype'] !== $ApiToken) return;
+    $ManagePanel->RemoveUser($info_product['Service_location'], $info_product['username']);
+    update('invoice', 'status', 'removebyadmin', 'id_invoice', $id_invoice);
+    sendmessage($from_id, $textbotlang['Admin']['ManageUser']['RemovedService'], $keyboardadmin, 'HTML');
+    Editmessagetext($from_id, $message_id, $text_inline, json_encode(['inline_keyboard' => []]));
+    step('home', $from_id);
+} elseif (preg_match('/removeserviceresellerandback-(\w+)/', $datain, $dataget)) {
+    $id_invoice = $dataget[1];
+    $info_product = select("invoice", "*", "id_invoice", $id_invoice, "select");
+    if (!$info_product || $info_product['bottype'] !== $ApiToken) return;
+    if ($info_product['Status'] == "removebyadmin") {
+        sendmessage($from_id, "❌ سرویس از قبل حذف شده است", $keyboardadmin, 'HTML');
         return;
     }
-    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        $ownerUser = select("user", "*", "id", $row['id_user'], "select");
-        $ownerBalance = json_decode(file_get_contents("data/{$row['id_user']}/{$row['id_user']}.json"), true)['Balance'] ?? 0;
-        $ownerBalanceFmt = number_format($ownerBalance);
-        $statusEmoji = $row['status'] == 'active' ? '✅' : '❌';
-        $info = "$statusEmoji نام سرویس: <code>{$row['username']}</code>\n"
-            . "👤 کاربر: <a href='tg://user?id={$row['id_user']}'>{$row['id_user']}</a> @{$ownerUser['username']}\n"
-            . "📦 محصول: {$row['name_product']}\n"
-            . "💰 موجودی کاربر: $ownerBalanceFmt تومان\n"
-            . "🔖 وضعیت: {$row['status']}";
-        sendmessage($from_id, $info, null, 'html');
+    $ManagePanel->RemoveUser($info_product['Service_location'], $info_product['username']);
+    update('invoice', 'status', 'removebyadmin', 'id_invoice', $id_invoice);
+    $Balance_user = select("user", "*", "id", $info_product['id_user'], "select");
+    $Balance_add_user = $Balance_user['Balance'] + $info_product['price_product'];
+    update("user", "Balance", $Balance_add_user, "id", $info_product['id_user']);
+    $textadd = "💎 کاربر عزیز مبلغ {$info_product['price_product']} تومان به موجودی کیف پول تان اضافه گردید.";
+    sendmessage($info_product['id_user'], $textadd, null, 'HTML');
+    sendmessage($from_id, $textbotlang['Admin']['ManageUser']['RemovedService'], $keyboardadmin, 'HTML');
+    Editmessagetext($from_id, $message_id, $text_inline, json_encode(['inline_keyboard' => []]));
+    step('home', $from_id);
+} elseif (preg_match('/changestatusreselleradmin_(\w+)/', $datain, $dataget)) {
+    $id_invoice = $dataget[1];
+    $nameloc = select("invoice", "*", "id_invoice", $id_invoice, "select");
+    if (!$nameloc || $nameloc['bottype'] !== $ApiToken) return;
+    $DataUserOut = $ManagePanel->DataUser($nameloc['Service_location'], $nameloc['username']);
+    if ($DataUserOut['status'] == "on_hold") {
+        sendmessage($from_id, "❌ هنوز به کانفیگ متصل نشده است و امکان تغییر وضعیت سرویس وجود ندارد.", null, 'html');
+        return;
     }
-    sendmessage($from_id, "✅ جستجو پایان یافت.", $keyboardadmin, 'html');
+    if ($DataUserOut['status'] == "Unsuccessful") {
+        sendmessage($from_id, $textbotlang['users']['stateus']['error'], null, 'html');
+        return;
+    }
+    if ($DataUserOut['status'] == "active") {
+        $confirmkbd = json_encode([
+            'inline_keyboard' => [
+                [['text' => '✅ تایید و غیرفعال کردن کانفیگ', 'callback_data' => "confirmstatusreseller_" . $id_invoice]],
+                [['text' => $textbotlang['users']['stateus']['backinfo'], 'callback_data' => "manageinvoicereseller_" . $id_invoice]],
+            ]
+        ]);
+        Editmessagetext($from_id, $message_id, "📌 با تایید گزینه زیر کانفیگ خاموش و دیگر امکان اتصال وجود ندارد.", $confirmkbd);
+    } else {
+        $confirmkbd = json_encode([
+            'inline_keyboard' => [
+                [['text' => '✅ تایید و فعال کردن کانفیگ', 'callback_data' => "confirmstatusreseller_" . $id_invoice]],
+                [['text' => $textbotlang['users']['stateus']['backinfo'], 'callback_data' => "manageinvoicereseller_" . $id_invoice]],
+            ]
+        ]);
+        Editmessagetext($from_id, $message_id, "📌 با تایید گزینه زیر کانفیگ روشن خواهد شد.", $confirmkbd);
+    }
+} elseif (preg_match('/confirmstatusreseller_(\w+)/', $datain, $dataget)) {
+    $id_invoice = $dataget[1];
+    $nameloc = select("invoice", "*", "id_invoice", $id_invoice, "select");
+    if (!$nameloc || $nameloc['bottype'] !== $ApiToken) return;
+    $bakinfos = json_encode([
+        'inline_keyboard' => [[['text' => $textbotlang['users']['stateus']['backinfo'], 'callback_data' => "manageinvoicereseller_" . $id_invoice]]]
+    ]);
+    $dataoutput = $ManagePanel->Change_status($nameloc['username'], $nameloc['Service_location']);
+    if ($dataoutput['status'] == "Unsuccessful") {
+        Editmessagetext($from_id, $message_id, $textbotlang['users']['stateus']['notchanged'], $bakinfos);
+        return;
+    }
+    $DataUserOut = $ManagePanel->DataUser($nameloc['Service_location'], $nameloc['username']);
+    if ($DataUserOut['status'] == "active") {
+        update("invoice", "Status", "active", "id_invoice", $id_invoice);
+        Editmessagetext($from_id, $message_id, $textbotlang['users']['stateus']['activedconfig'], $bakinfos);
+    } else {
+        update("invoice", "Status", "disablebyadmin", "id_invoice", $id_invoice);
+        Editmessagetext($from_id, $message_id, $textbotlang['users']['stateus']['disabledconfig'], $bakinfos);
+    }
 } elseif (preg_match('/addbalanceuser_(\w+)/', $datain, $dataget)) {
     $iduser = $dataget[1];
     update("user", "Processing_value", $iduser, "id", $from_id);
