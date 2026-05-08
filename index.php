@@ -457,8 +457,10 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
     if ($setting['statusnamecustom'] == 'onnamecustom') {
         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             $data = "";
-            if ($row != null)
-                $data = " | {$row['note']}";
+            if ($row['note'] != null) {
+                $displayNote = strpos($row['note'], '__name:') === 0 ? substr($row['note'], 7) : $row['note'];
+                $data = " | $displayNote";
+            }
             $keyboardlists['inline_keyboard'][] = [
                 [
                     'text' => "✨" . $row['username'] . $data . "✨",
@@ -468,9 +470,12 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
         }
     } else {
         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $displayName = ($row['note'] !== null && strpos($row['note'], '__name:') === 0)
+                ? substr($row['note'], 7)
+                : $row['username'];
             $keyboardlists['inline_keyboard'][] = [
                 [
-                    'text' => "✨" . $row['username'] . "✨",
+                    'text' => "✨" . $displayName . "✨",
                     'callback_data' => "product_" . $row['id_invoice']
                 ],
             ];
@@ -519,8 +524,10 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
     if ($setting['statusnamecustom'] == 'onnamecustom') {
         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             $data = "";
-            if ($row != null)
-                $data = " | {$row['note']}";
+            if ($row['note'] != null) {
+                $displayNote = strpos($row['note'], '__name:') === 0 ? substr($row['note'], 7) : $row['note'];
+                $data = " | $displayNote";
+            }
             $keyboardlists['inline_keyboard'][] = [
                 [
                     'text' => "✨" . $row['username'] . $data . "✨",
@@ -530,9 +537,12 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
         }
     } else {
         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $displayName = ($row['note'] !== null && strpos($row['note'], '__name:') === 0)
+                ? substr($row['note'], 7)
+                : $row['username'];
             $keyboardlists['inline_keyboard'][] = [
                 [
-                    'text' => "✨" . $row['username'] . "✨",
+                    'text' => "✨" . $displayName . "✨",
                     'callback_data' => "product_" . $row['id_invoice']
                 ],
             ];
@@ -582,8 +592,10 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
     if ($setting['statusnamecustom'] == 'onnamecustom') {
         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             $data = "";
-            if ($row != null)
-                $data = " | {$row['note']}";
+            if ($row['note'] != null) {
+                $displayNote = strpos($row['note'], '__name:') === 0 ? substr($row['note'], 7) : $row['note'];
+                $data = " | $displayNote";
+            }
             $keyboardlists['inline_keyboard'][] = [
                 [
                     'text' => "✨" . $row['username'] . $data . "✨",
@@ -593,9 +605,12 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
         }
     } else {
         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $displayName = ($row['note'] !== null && strpos($row['note'], '__name:') === 0)
+                ? substr($row['note'], 7)
+                : $row['username'];
             $keyboardlists['inline_keyboard'][] = [
                 [
-                    'text' => "✨" . $row['username'] . "✨",
+                    'text' => "✨" . $displayName . "✨",
                     'callback_data' => "product_" . $row['id_invoice']
                 ],
             ];
