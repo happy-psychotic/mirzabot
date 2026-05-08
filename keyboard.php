@@ -238,7 +238,7 @@ $keyboardPanel = json_encode([
 if($adminrulecheck['rule'] == "administrator"){
 $keyboardadmin = json_encode([
     'keyboard' => [
-        [['text' => $textbotlang['Admin']['Status']['btn']]],
+        [['text' => $textbotlang['Admin']['Status']['btn']],['text' => "🔍 جستجو سرویس"]],
         [['text' => $textbotlang['Admin']['btnkeyboardadmin']['managementpanel']],['text' => $textbotlang['Admin']['btnkeyboardadmin']['addpanel']]],
         [['text' => "⏳ تنظیم سریع قیمت زمان"],['text' => "🔋 تنظیم سریع قیمت حجم"]],
         [['text' => $textbotlang['Admin']['btnkeyboardadmin']['managruser']],['text' => "🏬 تنظیمات فروشگاه"]],
@@ -246,7 +246,6 @@ $keyboardadmin = json_encode([
         [['text' => "🤙 بخش پشتیبانی"],['text' => "📚 بخش آموزش"]],
         [['text' => "📬 گزارش ربات"],['text' => "🛠 قابلیت های پنل"]],
         [['text' => "⚙️ تنظیمات عمومی"],['text' => "💵 رسید های تایید نشده"]],
-        [['text' => "🔍 جستجو سرویس"]],
         [['text' => $textbotlang['users']['backbtn']]]
     ],
     'resize_keyboard' => true

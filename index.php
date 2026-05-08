@@ -7203,8 +7203,8 @@ $text_porsant
             ['text' => $textbotlang['users']['stateus']['backinfo'], 'callback_data' => "product_" . $id_invoice],
         ]]
     ]);
-    $currentSuffix = explode('_', $invoice['username'], 2)[1] ?? $invoice['username'];
-    Editmessagetext($from_id, $message_id, "✏️ نام فعلی سرویس: <code>{$invoice['username']}</code>\n\nپسوند جدید را وارد کنید (فقط حروف انگلیسی و عدد، ۲ تا ۱۶ کاراکتر):", $backinfoss);
+    $currentDisplay = ($invoice['note'] !== null && strpos($invoice['note'], '__name:') === 0) ? substr($invoice['note'], 7) : $invoice['username'];
+    Editmessagetext($from_id, $message_id, "✏️ نام فعلی سرویس: <code>$currentDisplay</code>\n\nنام جدید را وارد کنید:", $backinfoss);
     step("getrenameservice", $from_id);
 } elseif ($user['step'] == "getrenameservice") {
     $id_invoice = $user['Processing_value'];
@@ -7219,11 +7219,11 @@ $text_porsant
             ['text' => $textbotlang['users']['stateus']['backinfo'], 'callback_data' => "product_" . $id_invoice],
         ]]
     ]);
-    if (!preg_match('/^[a-z0-9]{2,16}$/i', $text)) {
-        sendmessage($from_id, "❌ نام نامعتبر است. فقط حروف انگلیسی و عدد، ۲ تا ۱۶ کاراکتر مجاز است.", $backinfoss, 'html');
+    if (mb_strlen($text) < 1 || mb_strlen($text) > 32) {
+        sendmessage($from_id, "❌ نام نامعتبر است. بین ۱ تا ۳۲ کاراکتر وارد کنید.", $backinfoss, 'html');
         return;
     }
-    $newDisplayName = $from_id . '_' . strtolower($text);
+    $newDisplayName = $text;
     update("invoice", "note", '__name:' . $newDisplayName, "id_invoice", $id_invoice);
     step("home", $from_id);
     sendmessage($from_id, "✅ نام سرویس به <code>$newDisplayName</code> تغییر یافت.", $backinfoss, 'html');
