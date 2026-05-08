@@ -964,7 +964,11 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
     }
     $nameconfig = "";
     if ($nameloc['note'] != null) {
-        $nameconfig = "✍️ یادداشت کانفیگ : {$nameloc['note']}";
+        if (strpos($nameloc['note'], '__name:') === 0) {
+            $nameconfig = "✏️ نام سرویس : " . substr($nameloc['note'], 7);
+        } else {
+            $nameconfig = "✍️ یادداشت کانفیگ : {$nameloc['note']}";
+        }
     }
     $stmt = $pdo->prepare("SELECT value FROM service_other WHERE username = :username AND type = 'extend_user' AND status = 'paid' ORDER BY time DESC");
     $stmt->execute([
@@ -1066,6 +1070,10 @@ $nameconfig";
                 'text' => '📝 تغییر یادداشت',
                 'callback_data' => "changenote_"
             ),
+            'renameservice' => array(
+                'text' => '✏️ تغییر نام سرویس',
+                'callback_data' => "renameservice_"
+            ),
             'Extra_volume' => array(
                 'text' => $textbotlang['users']['Extra_volume']['sellextra'],
                 'callback_data' => "Extra_volume_"
@@ -1095,6 +1103,7 @@ $nameconfig";
             unset($keyboarddate['transfor']);
             unset($keyboarddate['Extra_time']);
             unset($keyboarddate['removeservice']);
+            unset($keyboarddate['renameservice']);
         }
         if ($marzban['type'] == "ibsng" || $marzban['type'] == "mikrotik") {
             unset($keyboarddate['linksub']);
@@ -7178,6 +7187,43 @@ $text_porsant
             'parse_mode' => "HTML"
         ]);
     }
+} elseif (preg_match('/renameservice_(\w+)/', $datain, $dataget)) {
+    $id_invoice = $dataget[1];
+    $invoice = select("invoice", "*", "id_invoice", $id_invoice, "select");
+    if (!$invoice || $invoice['id_user'] != $from_id) {
+        sendmessage($from_id, "❌ سرویس یافت نشد.", null, 'html');
+        return;
+    }
+    update("user", "Processing_value", $id_invoice, "id", $from_id);
+    $backinfoss = json_encode([
+        'inline_keyboard' => [[
+            ['text' => $textbotlang['users']['stateus']['backinfo'], 'callback_data' => "product_" . $id_invoice],
+        ]]
+    ]);
+    $currentSuffix = explode('_', $invoice['username'], 2)[1] ?? $invoice['username'];
+    Editmessagetext($from_id, $message_id, "✏️ نام فعلی سرویس: <code>{$invoice['username']}</code>\n\nپسوند جدید را وارد کنید (فقط حروف انگلیسی و عدد، ۲ تا ۱۶ کاراکتر):", $backinfoss);
+    step("getrenameservice", $from_id);
+} elseif ($user['step'] == "getrenameservice") {
+    $id_invoice = $user['Processing_value'];
+    $invoice = select("invoice", "*", "id_invoice", $id_invoice, "select");
+    if (!$invoice || $invoice['id_user'] != $from_id) {
+        sendmessage($from_id, "❌ سرویس یافت نشد.", $keyboard, 'html');
+        step("home", $from_id);
+        return;
+    }
+    $backinfoss = json_encode([
+        'inline_keyboard' => [[
+            ['text' => $textbotlang['users']['stateus']['backinfo'], 'callback_data' => "product_" . $id_invoice],
+        ]]
+    ]);
+    if (!preg_match('/^[a-z0-9]{2,16}$/i', $text)) {
+        sendmessage($from_id, "❌ نام نامعتبر است. فقط حروف انگلیسی و عدد، ۲ تا ۱۶ کاراکتر مجاز است.", $backinfoss, 'html');
+        return;
+    }
+    $newDisplayName = $from_id . '_' . strtolower($text);
+    update("invoice", "note", '__name:' . $newDisplayName, "id_invoice", $id_invoice);
+    step("home", $from_id);
+    sendmessage($from_id, "✅ نام سرویس به <code>$newDisplayName</code> تغییر یافت.", $backinfoss, 'html');
 }
 if (isset($update['pre_checkout_query'])) {
     $userid = $update['pre_checkout_query']['from']['id'];

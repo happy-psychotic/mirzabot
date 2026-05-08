@@ -186,7 +186,9 @@ if ($setting['inlinebtnmain'] == "oninline" && !empty($keyboardRows)) {
     if ($admin_idss != 0) {
         $temp_addtional_key[] = ['text' => $textbotlang['Admin']['textpaneladmin'], 'callback_data' => "admin"];
     }
-    if ($users['agent'] != "f" && trim(strval($datatextbot['textpanelagent'])) !== '') {
+    $agentPanelCustomNameCount = select("marzban_panel", "*", "MethodUsername", "متن دلخواه نماینده + عدد ترتیبی", "count");
+    $agentPanelHasContent = ($setting['bulkbuy'] != "offbulk") || ($agentPanelCustomNameCount > 0);
+    if ($users['agent'] != "f" && trim(strval($datatextbot['textpanelagent'])) !== '' && $agentPanelHasContent) {
         $temp_addtional_key[] = ['text' => $datatextbot['textpanelagent'], 'callback_data' => "agentpanel"];
     }
     if ($users['agent'] == "f" && $setting['statusagentrequest'] == "onrequestagent" && trim(strval($datatextbot['textrequestagent'])) !== '' && trim(strval($datatextbot['text_request_agent_dec'] ?? '')) !== '') {
@@ -210,7 +212,7 @@ if ($setting['inlinebtnmain'] == "oninline" && !empty($keyboardRows)) {
     if ($admin_idss != 0) {
         $temp_addtional_key[] = ['text' => $textbotlang['Admin']['textpaneladmin']];
     }
-    if ($users['agent'] != "f" && trim(strval($datatextbot['textpanelagent'])) !== '') {
+    if ($users['agent'] != "f" && trim(strval($datatextbot['textpanelagent'])) !== '' && $agentPanelHasContent) {
         $temp_addtional_key[] = ['text' => $datatextbot['textpanelagent']];
     }
     if ($users['agent'] == "f" && $setting['statusagentrequest'] == "onrequestagent" && trim(strval($datatextbot['textrequestagent'])) !== '' && trim(strval($datatextbot['text_request_agent_dec'] ?? '')) !== '') {
