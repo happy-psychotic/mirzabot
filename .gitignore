@@ -1,10 +1,31 @@
+# Runtime logs
 /error_log
 /log.txt
 /cookie.txt
+/cronbot/error_log
+/cronbot/log.txt
 /api/log.txt
-/storage/
 /sub/cookie.txt
-/config.php.bak
+
+# Runtime storage
+/storage/
 /.cache/
+
+# Config files with real credentials — NEVER track these
+/config.php.bak
+/vpnbot/Default/config.php
+/vpnbot/update/config.php
+
+# Live reseller bot instances — generated from Default template, not tracked
 /vpnbot/[0-9]*/
 /vpnbot/*_bot/
+
+# Temp image files generated at runtime
+/*.png
+/*.jpg
+
+# Docs/scripts/tests that are server-local or repo-local only
+/docs/
+/scripts/
+/tests/
+/PROJECT_UPDATE.md
