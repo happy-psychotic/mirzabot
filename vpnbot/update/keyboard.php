@@ -93,7 +93,8 @@ $list_marzban_usertest = json_encode($list_marzban_panel_usertest);
 $keyboardadmin = json_encode([
     'keyboard' => [
         [
-            ['text' => "📊 آمار ربات"]
+            ['text' => "📊 آمار ربات"],
+            ['text' => "🔎 جستجو سرویس"]
         ],
         [
             ['text' => "💰 تنظیمات فروشگاه"],
@@ -102,9 +103,6 @@ $keyboardadmin = json_encode([
         [
             ['text' => "🔍 جستجو کاربر"],
             ['text' => "👨‍🔧  مدیریت ادمین ها"]
-        ],
-        [
-            ['text' => "🔎 جستجو سرویس"]
         ],
         [
             ['text' => "📝 تنظیم متون"]
