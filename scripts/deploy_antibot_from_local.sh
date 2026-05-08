@@ -10,20 +10,30 @@ REPO_ROOT="$(git -C "$(dirname "$0")/.." rev-parse --show-toplevel)"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
+# Only deploy committed code — uncommitted changes are never sent to server
 git -C "$REPO_ROOT" archive "$REF" | tar -x -C "$TMP_DIR"
 
 RSYNC_EXCLUDES=(
   --exclude '.git/'
   --exclude 'config.php'
+  --exclude 'vpnbot/Default/config.php'
+  --exclude 'vpnbot/update/config.php'
   --exclude 'error_log'
+  --exclude 'cronbot/error_log'
+  --exclude 'cronbot/log.txt'
   --exclude 'log.txt'
   --exclude 'cookie.txt'
   --exclude 'api/log.txt'
   --exclude 'storage/'
   --exclude 'sub/cookie.txt'
   --exclude 'config.php.bak'
+  --exclude '*.png'
+  --exclude '*.jpg'
   --exclude 'vpnbot/[0-9]*/'
   --exclude 'vpnbot/*_bot/'
+  --exclude 'docs/'
+  --exclude 'tests/'
+  --exclude 'PROJECT_UPDATE.md'
 )
 
 RSYNC_ARGS=(-az --delete --itemize-changes "${RSYNC_EXCLUDES[@]}")
@@ -46,5 +56,10 @@ ssh "$HOST" "chmod 755 '$APP_DIR' \
   && cd '$APP_DIR' \
   && php -l index.php >/dev/null \
   && php -l config.php >/dev/null \
-  && echo 'deploy ok: $APP_DIR'"
-echo "reseller bot templates were not auto-synced; run scripts/sync_reseller_templates.sh manually only after review"
+  && echo 'main bot deploy ok'"
+
+# Sync reseller bot instances from vpnbot/update template
+echo "syncing reseller bot instances..."
+ssh "$HOST" "bash '$APP_DIR/scripts/sync_reseller_templates.sh' '$APP_DIR'"
+
+echo "deploy complete: $APP_DIR"

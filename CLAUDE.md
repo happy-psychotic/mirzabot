@@ -14,17 +14,16 @@ Mirzabot is a PHP Telegram bot for selling VPN services. It includes:
 
 ## ⛔ DEPLOY RULES — NON-NEGOTIABLE
 
-### The only safe deploy method is scp
-Push specific changed files from local to server using `scp`:
+### The only correct deploy method
+1. Make all changes locally
+2. Commit and push to git (`git push origin main`)
+3. Run the deploy script:
 ```bash
-scp local/file.php antibot:/var/www/mirza_pro/file.php
+bash /home/saeid/Documents/AntiBan/scripts/deploy_antibot_from_local.sh
 ```
-For reseller bots, deploy to all instances:
-```bash
-for dir in Default 383340509Red_v2ray_bot 7356499248anti_blocks_bot 96813594Anti_filternetbot update; do
-  scp vpnbot/Default/admin.php antibot:/var/www/mirza_pro/vpnbot/$dir/admin.php
-done
-```
+The script uses `git archive` (only committed code goes to server), rsync with excludes (config.php and runtime files are never touched), runs `php -l` validation, and auto-syncs all reseller bot instances.
+
+`DRY_RUN=1 bash scripts/deploy_antibot_from_local.sh` to preview what will change.
 
 ### NEVER run any git command on the live server
 No `git pull`, `git stash`, `git checkout`, `git reset`, `git merge` — nothing.
@@ -32,11 +31,11 @@ The server is a **deploy target only**, not a git client.
 The server has local modifications (config, runtime data) that will always conflict with git operations.
 Running git on the server WILL overwrite real config files with template placeholders and break all bots.
 
-### NEVER use rsync --delete toward the server
-It will wipe server-local files that are not in the local repo (configs, runtime data).
+### NEVER use scp or rsync manually toward the server
+The deploy script handles everything safely. Manual scp/rsync can accidentally overwrite `config.php` or miss the reseller bot sync step.
 
-### Always change locally first, then deploy
-Never make changes directly on the server. Local repo is the source of truth.
+### Always commit before deploying
+The deploy script uses `git archive` — only committed changes reach the server. Uncommitted edits are never deployed.
 
 ---
 
@@ -122,7 +121,6 @@ When changing `vpnbot/Default/admin.php` or `vpnbot/Default/index.php`:
 /log.txt
 /storage/
 /docs/
-/scripts/
 /tests/
 ```
 

@@ -24,8 +24,7 @@
 /*.png
 /*.jpg
 
-# Docs/scripts/tests that are server-local or repo-local only
+# Docs/tests that are server-local only
 /docs/
-/scripts/
 /tests/
 /PROJECT_UPDATE.md
