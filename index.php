@@ -435,6 +435,21 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
     update("user", "number", $user_phone, "id", $from_id);
     step('home', $from_id);
 } elseif ($text == $datatextbot['text_Purchased_services'] || $datain == "backorder" || $text == "/services") {
+    if (!function_exists('invoice_list_label')) {
+        function invoice_list_label(array $row, string $statusnamecustom): string {
+            $icon = in_array($row['Status'], ['active', 'sendedwarn', 'send_on_hold']) ? '✅' : '❌';
+            if ($statusnamecustom == 'onnamecustom' && $row['note'] !== null) {
+                $displayNote = strpos($row['note'], '__name:') === 0 ? substr($row['note'], 7) : $row['note'];
+                $name = $row['username'] . ' | ' . $displayNote;
+            } else {
+                $name = ($row['note'] !== null && strpos($row['note'], '__name:') === 0)
+                    ? substr($row['note'], 7)
+                    : $row['username'];
+            }
+            $vol = $row['Volume'] > 0 ? number_format((float)$row['Volume'], 1) . ' GB' : '∞';
+            return $icon . ' ' . $name . ' | ' . $vol;
+        }
+    }
     $stmt = $pdo->prepare("SELECT * FROM invoice WHERE id_user = :id_user AND (status = 'active' OR status = 'end_of_time'  OR status = 'end_of_volume' OR status = 'sendedwarn' OR Status = 'send_on_hold')");
     $stmt->bindParam(':id_user', $from_id);
     $stmt->execute();
@@ -454,45 +469,13 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
     ];
     $stmt = $pdo->prepare("SELECT * FROM invoice WHERE id_user = '$from_id' AND (status = 'active' OR status = 'end_of_time'  OR status = 'end_of_volume' OR status = 'sendedwarn' OR status = 'send_on_hold') ORDER BY time_sell DESC LIMIT $start_index, $items_per_page");
     $stmt->execute();
-    if ($setting['statusnamecustom'] == 'onnamecustom') {
-        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-            $data = "";
-            if ($row['note'] != null) {
-                $displayNote = strpos($row['note'], '__name:') === 0 ? substr($row['note'], 7) : $row['note'];
-                $data = " | $displayNote";
-            }
-            $keyboardlists['inline_keyboard'][] = [
-                [
-                    'text' => "✨" . $row['username'] . $data . "✨",
-                    'callback_data' => "product_" . $row['id_invoice']
-                ],
-            ];
-        }
-    } else {
-        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-            $displayName = ($row['note'] !== null && strpos($row['note'], '__name:') === 0)
-                ? substr($row['note'], 7)
-                : $row['username'];
-            $keyboardlists['inline_keyboard'][] = [
-                [
-                    'text' => "✨" . $displayName . "✨",
-                    'callback_data' => "product_" . $row['id_invoice']
-                ],
-            ];
-        }
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $keyboardlists['inline_keyboard'][] = [
+            ['text' => invoice_list_label($row, $setting['statusnamecustom']), 'callback_data' => "product_" . $row['id_invoice']],
+        ];
     }
-    $pagination_buttons = [
-        [
-            'text' => $textbotlang['users']['page']['next'],
-            'callback_data' => 'next_page'
-        ],
-    ];
-    $backuser = [
-        [
-            'text' => "🔙 بازگشت به منوی اصلی",
-            'callback_data' => 'backuser'
-        ]
-    ];
+    $pagination_buttons = [['text' => $textbotlang['users']['page']['next'], 'callback_data' => 'next_page']];
+    $backuser = [['text' => "🔙 بازگشت به منوی اصلی", 'callback_data' => 'backuser']];
     $keyboardlists['inline_keyboard'][] = [['text' => "🔍 جستجو سریع", 'callback_data' => "searchservice"]];
     $keyboardlists['inline_keyboard'][] = $pagination_buttons;
     $keyboardlists['inline_keyboard'][] = $backuser;
@@ -518,49 +501,16 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
     ];
     $stmt = $pdo->prepare("SELECT * FROM invoice WHERE id_user = '$from_id' AND (status = 'active' OR status = 'end_of_time'  OR status = 'end_of_volume' OR status = 'sendedwarn' OR status = 'send_on_hold') ORDER BY time_sell DESC LIMIT $start_index, $items_per_page");
     $stmt->execute();
-    if ($setting['statusnamecustom'] == 'onnamecustom') {
-        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-            $data = "";
-            if ($row['note'] != null) {
-                $displayNote = strpos($row['note'], '__name:') === 0 ? substr($row['note'], 7) : $row['note'];
-                $data = " | $displayNote";
-            }
-            $keyboardlists['inline_keyboard'][] = [
-                [
-                    'text' => "✨" . $row['username'] . $data . "✨",
-                    'callback_data' => "product_" . $row['id_invoice']
-                ],
-            ];
-        }
-    } else {
-        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-            $displayName = ($row['note'] !== null && strpos($row['note'], '__name:') === 0)
-                ? substr($row['note'], 7)
-                : $row['username'];
-            $keyboardlists['inline_keyboard'][] = [
-                [
-                    'text' => "✨" . $displayName . "✨",
-                    'callback_data' => "product_" . $row['id_invoice']
-                ],
-            ];
-        }
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $keyboardlists['inline_keyboard'][] = [
+            ['text' => invoice_list_label($row, $setting['statusnamecustom']), 'callback_data' => "product_" . $row['id_invoice']],
+        ];
     }
     $pagination_buttons = [
-        [
-            'text' => $textbotlang['users']['page']['next'],
-            'callback_data' => 'next_page'
-        ],
-        [
-            'text' => $textbotlang['users']['page']['previous'],
-            'callback_data' => 'previous_page'
-        ]
+        ['text' => $textbotlang['users']['page']['next'],     'callback_data' => 'next_page'],
+        ['text' => $textbotlang['users']['page']['previous'], 'callback_data' => 'previous_page'],
     ];
-    $backuser = [
-        [
-            'text' => "🔙 بازگشت به منوی اصلی",
-            'callback_data' => 'backuser'
-        ]
-    ];
+    $backuser = [['text' => "🔙 بازگشت به منوی اصلی", 'callback_data' => 'backuser']];
     $keyboardlists['inline_keyboard'][] = [['text' => "🔍 جستجو سریع", 'callback_data' => "searchservice"]];
     $keyboardlists['inline_keyboard'][] = $pagination_buttons;
     $keyboardlists['inline_keyboard'][] = $backuser;
@@ -583,49 +533,16 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
     ];
     $stmt = $pdo->prepare("SELECT * FROM invoice WHERE id_user = '$from_id' AND (status = 'active' OR status = 'end_of_time'  OR status = 'end_of_volume' OR status = 'sendedwarn' OR status = 'send_on_hold') ORDER BY time_sell DESC LIMIT $previous_page, $items_per_page");
     $stmt->execute();
-    if ($setting['statusnamecustom'] == 'onnamecustom') {
-        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-            $data = "";
-            if ($row['note'] != null) {
-                $displayNote = strpos($row['note'], '__name:') === 0 ? substr($row['note'], 7) : $row['note'];
-                $data = " | $displayNote";
-            }
-            $keyboardlists['inline_keyboard'][] = [
-                [
-                    'text' => "✨" . $row['username'] . $data . "✨",
-                    'callback_data' => "product_" . $row['id_invoice']
-                ],
-            ];
-        }
-    } else {
-        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-            $displayName = ($row['note'] !== null && strpos($row['note'], '__name:') === 0)
-                ? substr($row['note'], 7)
-                : $row['username'];
-            $keyboardlists['inline_keyboard'][] = [
-                [
-                    'text' => "✨" . $displayName . "✨",
-                    'callback_data' => "product_" . $row['id_invoice']
-                ],
-            ];
-        }
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $keyboardlists['inline_keyboard'][] = [
+            ['text' => invoice_list_label($row, $setting['statusnamecustom']), 'callback_data' => "product_" . $row['id_invoice']],
+        ];
     }
     $pagination_buttons = [
-        [
-            'text' => $textbotlang['users']['page']['next'],
-            'callback_data' => 'next_page'
-        ],
-        [
-            'text' => $textbotlang['users']['page']['previous'],
-            'callback_data' => 'previous_page'
-        ]
+        ['text' => $textbotlang['users']['page']['next'],     'callback_data' => 'next_page'],
+        ['text' => $textbotlang['users']['page']['previous'], 'callback_data' => 'previous_page'],
     ];
-    $backuser = [
-        [
-            'text' => "🔙 بازگشت به منوی اصلی",
-            'callback_data' => 'backuser'
-        ]
-    ];
+    $backuser = [['text' => "🔙 بازگشت به منوی اصلی", 'callback_data' => 'backuser']];
     $keyboardlists['inline_keyboard'][] = [['text' => "🔍 جستجو سریع", 'callback_data' => "searchservice"]];
     $keyboardlists['inline_keyboard'][] = $pagination_buttons;
     $keyboardlists['inline_keyboard'][] = $backuser;
