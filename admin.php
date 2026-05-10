@@ -6112,16 +6112,6 @@ n2", $backadmin, 'HTML');
     $keyboardlists = [
         'inline_keyboard' => [],
     ];
-    $keyboardlists['inline_keyboard'][] = [
-        ['text' => "♻️ بروزرسانی", 'callback_data' => "manageinvoice_" . $OrderUser['id_invoice']],
-    ];
-    $keyboardlists['inline_keyboard'][] = [
-        ['text' => $textbotlang['Admin']['ManageUser']['removeservice'], 'callback_data' => "removeservice-" . $OrderUser['id_invoice']],
-        ['text' => $textbotlang['Admin']['ManageUser']['removeserviceandback'], 'callback_data' => "removeserviceandback-" . $OrderUser['id_invoice']],
-    ];
-    $keyboardlists['inline_keyboard'][] = [
-        ['text' => "🗑 حذف کامل سرویس", 'callback_data' => "removefull-" . $OrderUser['id_invoice']],
-    ];
     if (isset($OrderUser['time_sell'])) {
         $datatime = jdate('Y/m/d H:i:s', $OrderUser['time_sell']);
     } else {
