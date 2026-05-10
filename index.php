@@ -753,13 +753,19 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
     step('home', $from_id);
 } elseif (preg_match('/^product_(\w+)/', $datain, $dataget) || preg_match('/updateproduct_(\w+)/', $datain, $dataget) || $user['step'] == "getuseragnetservice" || $datain == "productcheckdata") {
     if ($user['step'] == "getuseragnetservice") {
-        $username = htmlspecialchars($text, ENT_QUOTES, 'UTF-8');
-        $sql = "SELECT * FROM invoice WHERE (username LIKE CONCAT('%', :username, '%') OR note  LIKE CONCAT('%', :notes, '%') OR Volume LIKE CONCAT('%',:Volume, '%') OR Service_time LIKE CONCAT('%',:Service_time, '%')) AND id_user = :id_user AND (status = 'active' OR status = 'end_of_time'  OR status = 'end_of_volume' OR status = 'sendedwarn' OR Status = 'send_on_hold')";
+        // Extract username from config link fragment if applicable (same logic as admin search)
+        if (preg_match('~^(?:vless|vmess|ss|trojan)://[^#]+#(.+)$~i', trim($text), $linkMatch)) {
+            $username = explode('-', urldecode($linkMatch[1]))[0];
+        } else {
+            $username = htmlspecialchars(trim($text), ENT_QUOTES, 'UTF-8');
+        }
+        $sql = "SELECT * FROM invoice WHERE id_user = :id_user
+                AND (status = 'active' OR status = 'end_of_time' OR status = 'end_of_volume' OR status = 'sendedwarn' OR Status = 'send_on_hold')
+                AND (username LIKE CONCAT('%', :username, '%') OR note LIKE CONCAT('%', :notes, '%') OR id_invoice LIKE CONCAT('%', :id_invoice, '%'))";
         $stmt = $pdo->prepare($sql);
         $stmt->bindParam(':username', $username, PDO::PARAM_STR);
-        $stmt->bindParam(':Service_time', $username, PDO::PARAM_STR);
-        $stmt->bindParam(':Volume', $username, PDO::PARAM_STR);
         $stmt->bindParam(':notes', $username, PDO::PARAM_STR);
+        $stmt->bindParam(':id_invoice', $username, PDO::PARAM_STR);
         $stmt->bindParam(':id_user', $from_id);
         $stmt->execute();
     } elseif ($datain == "productcheckdata") {
