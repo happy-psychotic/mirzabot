@@ -139,6 +139,9 @@ if (is_array($keyboardLayout) && isset($keyboardLayout['keyboard']) && is_array(
     $keyboardRows = $keyboardLayout['keyboard'];
 }
 
+$agentPanelCustomNameCount = select("marzban_panel", "*", "MethodUsername", "متن دلخواه نماینده + عدد ترتیبی", "count");
+$agentPanelHasContent = ($setting['bulkbuy'] != "offbulk") || ($agentPanelCustomNameCount > 0);
+
 if ($setting['inlinebtnmain'] == "oninline" && !empty($keyboardRows)) {
     $trace_keyboard = $keyboardRows;
     foreach ($trace_keyboard as $rowKey => $rowButtons) {
@@ -185,9 +188,9 @@ if ($setting['inlinebtnmain'] == "oninline" && !empty($keyboardRows)) {
     }
     if ($admin_idss != 0) {
         $temp_addtional_key[] = ['text' => $textbotlang['Admin']['textpaneladmin'], 'callback_data' => "admin"];
+    } elseif (in_array($users['agent'], ['n', 'n2'])) {
+        $temp_addtional_key[] = ['text' => $textbotlang['Admin']['textpaneladmin'], 'callback_data' => "ap_panel"];
     }
-    $agentPanelCustomNameCount = select("marzban_panel", "*", "MethodUsername", "متن دلخواه نماینده + عدد ترتیبی", "count");
-    $agentPanelHasContent = ($setting['bulkbuy'] != "offbulk") || ($agentPanelCustomNameCount > 0);
     if ($users['agent'] != "f" && trim(strval($datatextbot['textpanelagent'])) !== '' && $agentPanelHasContent) {
         $temp_addtional_key[] = ['text' => $datatextbot['textpanelagent'], 'callback_data' => "agentpanel"];
     }
@@ -210,6 +213,8 @@ if ($setting['inlinebtnmain'] == "oninline" && !empty($keyboardRows)) {
         return !empty($rowButtons);
     }));
     if ($admin_idss != 0) {
+        $temp_addtional_key[] = ['text' => $textbotlang['Admin']['textpaneladmin']];
+    } elseif (in_array($users['agent'], ['n', 'n2'])) {
         $temp_addtional_key[] = ['text' => $textbotlang['Admin']['textpaneladmin']];
     }
     if ($users['agent'] != "f" && trim(strval($datatextbot['textpanelagent'])) !== '' && $agentPanelHasContent) {
@@ -238,11 +243,11 @@ $keyboardPanel = json_encode([
 if($adminrulecheck['rule'] == "administrator"){
 $keyboardadmin = json_encode([
     'keyboard' => [
-        [['text' => $textbotlang['Admin']['Status']['btn']],['text' => "🔍 جستجو سرویس"]],
+        [['text' => "🔍 جستجو کاربر"],['text' => "🔍 جستجو سرویس"]],
         [['text' => $textbotlang['Admin']['btnkeyboardadmin']['managementpanel']],['text' => $textbotlang['Admin']['btnkeyboardadmin']['addpanel']]],
         [['text' => "⏳ تنظیم سریع قیمت زمان"],['text' => "🔋 تنظیم سریع قیمت حجم"]],
         [['text' => $textbotlang['Admin']['btnkeyboardadmin']['managruser']],['text' => "🏬 تنظیمات فروشگاه"]],
-        [['text' => "💎 مالی"]],
+        [['text' => "💎 مالی"],['text' => $textbotlang['Admin']['Status']['btn']]],
         [['text' => "🤙 بخش پشتیبانی"],['text' => "📚 بخش آموزش"]],
         [['text' => "📬 گزارش ربات"],['text' => "🛠 قابلیت های پنل"]],
         [['text' => "⚙️ تنظیمات عمومی"],['text' => "💵 رسید های تایید نشده"]],
@@ -254,7 +259,7 @@ $keyboardadmin = json_encode([
 if($adminrulecheck['rule'] == "Seller"){
 $keyboardadmin = json_encode([
     'keyboard' => [
-        [['text' => $textbotlang['Admin']['Status']['btn']]],
+        [['text' => "🔍 جستجو کاربر"],['text' => "🔍 جستجو سرویس"]],
         [['text' => "👤 مدیریت کاربر"]],
         [['text' => $textbotlang['users']['backbtn']]]
     ],

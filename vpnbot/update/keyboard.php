@@ -24,7 +24,7 @@ if (!is_array($admin_idsmain)) {
     $admin_idsmain = [];
 }
 
-if (!in_array($from_id, $admin_ids_decoded) && !in_array($from_id, $admin_idsmain)) {
+if (!in_array($from_id, $admin_idsmain)) {
     unset($keyboarddate['text_Admin']);
 }
 
@@ -93,7 +93,7 @@ $list_marzban_usertest = json_encode($list_marzban_panel_usertest);
 $keyboardadmin = json_encode([
     'keyboard' => [
         [
-            ['text' => "📊 آمار ربات"],
+            ['text' => "🔍 جستجو کاربر"],
             ['text' => "🔎 جستجو سرویس"]
         ],
         [
@@ -101,18 +101,16 @@ $keyboardadmin = json_encode([
             ['text' => "⚙️ وضعیت قابلیت ها"],
         ],
         [
-            ['text' => "🔍 جستجو کاربر"],
+            ['text' => "📊 آمار ربات"],
             ['text' => "👨‍🔧  مدیریت ادمین ها"]
         ],
         [
-            ['text' => "📝 تنظیم متون"]
+            ['text' => "📝 تنظیم متون"],
+            ['text' => "📣 جوین اجباری"]
         ],
         [
             ['text' => "📞 تنظیم نام کاربری پشتیبانی"],
             ['text' => "📬 گزارش ربات"],
-        ],
-        [
-            ['text' => "📣 جوین اجباری"]
         ],
         [
             ['text' => "🏠 بازگشت به منوی اصلی"]
@@ -251,4 +249,34 @@ function KeyboardCategory($location, $agent, $backuser = "backuser")
         ['text' => "▶️ بازگشت به منوی قبل", "callback_data" => $backuser],
     ];
     return json_encode($list_category);
+}
+
+function keyboard_config($config_split, $id_invoice, $back_active = true) {
+    global $textbotlang;
+    $keyboard_config = ['inline_keyboard' => []];
+    for ($i = 0; $i < count($config_split); $i++) {
+        $config = $config_split[$i];
+        $split_config = explode("://", $config, 2);
+        $type_prtocol = $split_config[0] ?? '';
+        $split_payload = $split_config[1] ?? $config;
+        if (isBase64($split_payload)) {
+            $split_payload = base64_decode($split_payload);
+        }
+        $configLabel = $type_prtocol !== '' ? strtoupper($type_prtocol) : 'CONFIG';
+        if ($type_prtocol == "vmess") {
+            $decodedConfig = json_decode($split_payload, true);
+            $split_payload = $decodedConfig['ps'] ?? $configLabel;
+        } else {
+            $split_payload = explode("#", $split_payload, 2)[1] ?? $configLabel;
+        }
+        $keyboard_config['inline_keyboard'][] = [
+            ['text' => "دریافت کانفیگ", 'callback_data' => "configget_{$id_invoice}_$i"],
+            ['text' => urldecode($split_payload), 'callback_data' => "none"],
+        ];
+    }
+    $keyboard_config['inline_keyboard'][] = [['text' => "⚙️ دریافت همه کانفیگ ها", 'callback_data' => "configget_$id_invoice" . "_1520"]];
+    if ($back_active) {
+        $keyboard_config['inline_keyboard'][] = [['text' => $textbotlang['users']['stateus']['backinfo'], 'callback_data' => "product_$id_invoice"]];
+    }
+    return json_encode($keyboard_config);
 }

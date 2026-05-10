@@ -39,7 +39,7 @@ $setting = select("setting", "*");
 $ManagePanel = new ManagePanel();
 $keyboard_check = json_decode($setting['keyboardmain'], true);
 if (is_array($keyboard_check) && preg_match('/[\x{600}-\x{6FF}\x{FB50}-\x{FDFF}]/u', $keyboard_check['keyboard'][0][0]['text'])) {
-    $keyboardmain = '{"keyboard":[[{"text":"text_sell"},{"text":"text_extend"}],[{"text":"text_usertest"},{"text":"text_wheel_luck"}],[{"text":"text_Purchased_services"},{"text":"accountwallet"}],[{"text":"text_affiliates"},{"text":"text_Tariff_list"}],[{"text":"text_support"},{"text":"text_help"}]]}';
+    $keyboardmain = '{"keyboard":[[{"text":"text_sell"},{"text":"text_extend"}],[{"text":"text_usertest"},{"text":"text_wheel_luck"}],[{"text":"text_Purchased_services"},{"text":"accountwallet"}],[{"text":"text_affiliates"},{"text":"text_support"}],[{"text":"text_Tariff_list"},{"text":"text_help"}]]}';
     update("setting", "keyboardmain", $keyboardmain, null, null);
 }
 
@@ -493,6 +493,7 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
             'callback_data' => 'backuser'
         ]
     ];
+    $keyboardlists['inline_keyboard'][] = [['text' => "🔍 جستجو سریع", 'callback_data' => "searchservice"]];
     $keyboardlists['inline_keyboard'][] = $pagination_buttons;
     $keyboardlists['inline_keyboard'][] = $backuser;
     $keyboard_json = json_encode($keyboardlists);
@@ -560,6 +561,7 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
             'callback_data' => 'backuser'
         ]
     ];
+    $keyboardlists['inline_keyboard'][] = [['text' => "🔍 جستجو سریع", 'callback_data' => "searchservice"]];
     $keyboardlists['inline_keyboard'][] = $pagination_buttons;
     $keyboardlists['inline_keyboard'][] = $backuser;
     $keyboard_json = json_encode($keyboardlists);
@@ -624,6 +626,7 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
             'callback_data' => 'backuser'
         ]
     ];
+    $keyboardlists['inline_keyboard'][] = [['text' => "🔍 جستجو سریع", 'callback_data' => "searchservice"]];
     $keyboardlists['inline_keyboard'][] = $pagination_buttons;
     $keyboardlists['inline_keyboard'][] = $backuser;
     $keyboard_json = json_encode($keyboardlists);
@@ -1323,7 +1326,24 @@ $textconnect
         sendmessage($from_id, "❌  خطا در خواندن اطلاعات کانفیگ با پشتیبانی در ارتباط باشید.", null, 'html');
         return;
     }
-    Editmessagetext($from_id, $message_id, "📌 از لیست زیر یک کانفیگ را انتخاب استفاده نمایید.", keyboard_config($DataUserOut['links'], $nameloc['id_invoice']));
+    // Send all configs directly without intermediate selection step
+    deletemessage($from_id, $message_id);
+    $backKb = json_encode(['inline_keyboard' => [[['text' => $textbotlang['users']['stateus']['backinfo'], 'callback_data' => "product_{$nameloc['id_invoice']}"]]]]);
+    foreach ($DataUserOut['links'] as $i => $link) {
+        $urlimage = runtimeTempPath("config_qr_{$from_id}_{$i}", '.png');
+        $qrCode = createqrcode($link);
+        file_put_contents($urlimage, $qrCode->getString());
+        addBackgroundImage($urlimage, $qrCode, 'images.jpg');
+        $isLast = ($i === array_key_last($DataUserOut['links']));
+        telegram('sendphoto', [
+            'chat_id'      => $from_id,
+            'photo'        => new CURLFile($urlimage),
+            'caption'      => formatConfigLinksForDelivery([$link]),
+            'parse_mode'   => "HTML",
+            'reply_markup' => $isLast ? $backKb : null,
+        ]);
+        unlink($urlimage);
+    }
 } elseif (preg_match('/configget_(.*)_(.*)/', $datain, $dataget)) {
     $id_invoice = $dataget[1];
     $nameloc = select("invoice", "*", "id_invoice", $id_invoice, "select");
@@ -1847,7 +1867,20 @@ $textconnect
     }
     if (intval($user['pricediscount']) != 0) {
         $result = ($pricelastextend * $user['pricediscount']) / 100;
-        $pricelastextend = $pricelastextend - $result;
+        $discountedExtend = round($pricelastextend - $result);
+        if (intval($user['affiliates']) != 0) {
+            $parentUser = select("user", "*", "id", $user['affiliates'], "select");
+            if ($parentUser && in_array($parentUser['agent'], ['n', 'n2'])) {
+                $agentPanel = select("marzban_panel", "*", "name_panel", $nameloc['Service_location'], "select");
+                $agentGigPrice = intval(json_decode($agentPanel['pricecustomvolume'] ?? '{}', true)[$parentUser['agent']] ?? 0);
+                $agentDayPrice = intval(json_decode($agentPanel['pricecustomtime']   ?? '{}', true)[$parentUser['agent']] ?? 0);
+                $agentCost = (intval($nameloc['Volume']) * $agentGigPrice) + (intval($nameloc['Service_time']) * $agentDayPrice);
+                if ($agentCost > 0 && $discountedExtend < $agentCost) {
+                    $discountedExtend = $agentCost;
+                }
+            }
+        }
+        $pricelastextend = $discountedExtend;
         sendmessage($from_id, sprintf($textbotlang['users']['Discount']['discountapplied'], $user['pricediscount']), null, 'HTML');
     }
     $DataUserOut = $ManagePanel->DataUser($nameloc['Service_location'], $nameloc['username']);
@@ -4175,7 +4208,21 @@ $textinvite
     }
     if (intval($user['pricediscount']) != 0) {
         $result = ($priceproduct * $user['pricediscount']) / 100;
-        $priceproduct = $priceproduct - $result;
+        $discountedPrice = round($priceproduct - $result);
+        // If buyer's parent is a reseller agent, floor the price to the agent's cost.
+        if (intval($user['affiliates']) != 0) {
+            $parentUser = select("user", "*", "id", $user['affiliates'], "select");
+            if ($parentUser && in_array($parentUser['agent'], ['n', 'n2'])) {
+                $agentPanel = select("marzban_panel", "*", "name_panel", $marzban_list_get['name_panel'], "select");
+                $agentGigPrice = intval(json_decode($agentPanel['pricecustomvolume'] ?? '{}', true)[$parentUser['agent']] ?? 0);
+                $agentDayPrice = intval(json_decode($agentPanel['pricecustomtime']   ?? '{}', true)[$parentUser['agent']] ?? 0);
+                $agentCost = ($info_product['Volume_constraint'] * $agentGigPrice) + ($info_product['Service_time'] * $agentDayPrice);
+                if ($agentCost > 0 && $discountedPrice < $agentCost) {
+                    $discountedPrice = $agentCost;
+                }
+            }
+        }
+        $priceproduct = $discountedPrice;
         sendmessage($from_id, sprintf($textbotlang['users']['Discount']['discountapplied'], $user['pricediscount']), null, 'HTML');
     }
     $notifctions = json_encode(array(
@@ -7441,6 +7488,9 @@ if (isset($update['message']['successful_payment'])) {
 }
 if (in_array($from_id, $admin_ids))
     require_once 'admin.php';
+
+if (in_array($user['agent'] ?? '', ['n', 'n2']) && !in_array($from_id, $admin_ids))
+    require_once 'agent_panel.php';
 
 $pdo = null;
 $connect->close();

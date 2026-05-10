@@ -483,7 +483,6 @@ if ($user['step'] == "createusertest" || preg_match('/locationtest_(.*)/', $data
 ⏳ مدت زمان: {day}  ساعت
 🗜 حجم سرویس:  {volume} مگابایت
 
-لینک اتصال:
 {config}";
     if ($marzban_list_get['type'] == "WGDashboard") {
         $datatextbot['textaftertext'] = "✅ سرویس با موفقیت ایجاد شد
@@ -1111,7 +1110,6 @@ if ($text == $text_bot_var['btn_keyboard']['buy'] && $setting['active_step_note'
 ⏳ مدت زمان: {day}  روز
 🗜 حجم سرویس:  {volume} گیگابایت
 
-لینک اتصال:
 {config}
 {links}
 ";
@@ -1489,11 +1487,8 @@ $textonebuy
 📥 حجم مصرفی : $usedTrafficGb
 💢 حجم باقی مانده : $RemainingVolume ($Percent%)
 
-📅 فعال تا تاریخ : $expirationDate ($day) 
+📅 فعال تا تاریخ : $expirationDate ($day)
 
-
-لینک اتصال : 
-    
 <code>$config</code>
 
 <code>$output</code>
@@ -1517,8 +1512,6 @@ $textonebuy
 🔄 اخرین زمان آپدیت لینک اشتراک  : $lastupdate
 #️⃣ کلاینت متصل شده :<code>{$DataUserOut['sub_last_user_agent']}</code>
 
-لینک اتصال : 
-    
 $config
 $output
 ";
@@ -1535,10 +1528,7 @@ $output
 📅 فعال تا تاریخ : $expirationDate ($day)
 
 📶 اخرین زمان اتصال شما : $lastonline
-        
 
-لینک اتصال : 
-    
 <code>$config</code>
 
 <code>$output</code>

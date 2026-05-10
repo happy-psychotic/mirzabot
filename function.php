@@ -2244,7 +2244,8 @@ function formatConfigLinksForDelivery($configs)
         $encodedConfig = base64_encode($config . "\n");
         $messages[] = "لینک رمز نگاری شده (پیشنهادی)\n"
             . formatTelegramCode($encodedConfig)
-            . "\n\nاپ آیفون : streisand یا nvp\n\nلینک :\n"
+            . "\n\nاپ آیفون : streisand یا nvp\n\n"
+            . "لینک :\n"
             . formatTelegramCode($config);
     }
 

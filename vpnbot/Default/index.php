@@ -483,7 +483,6 @@ if ($user['step'] == "createusertest" || preg_match('/locationtest_(.*)/', $data
 ⏳ مدت زمان: {day}  ساعت
 🗜 حجم سرویس:  {volume} مگابایت
 
-لینک اتصال:
 {config}";
     if ($marzban_list_get['type'] == "WGDashboard") {
         $datatextbot['textaftertext'] = "✅ سرویس با موفقیت ایجاد شد
@@ -1111,7 +1110,6 @@ if ($text == $text_bot_var['btn_keyboard']['buy'] && $setting['active_step_note'
 ⏳ مدت زمان: {day}  روز
 🗜 حجم سرویس:  {volume} گیگابایت
 
-لینک اتصال:
 {config}
 {links}
 ";
@@ -1194,9 +1192,12 @@ if ($text == $text_bot_var['btn_keyboard']['buy'] && $setting['active_step_note'
       }
     }
     sendmessage($from_id, $textbotlang['users']['selectoption'], $keyboard, 'HTML');
-    if (intval($userbotbalance['pricediscount']) != 0) {
-        $resultper = ($datafactor['price_productMain'] * $userbotbalance['pricediscount']) / 100;
-        $datafactor['price_productMain'] = $datafactor['price_productMain'] - $resultper;
+    if (intval($user['pricediscount']) != 0) {
+        $discountedPrice = $datafactor['price_product'] - ($datafactor['price_product'] * $user['pricediscount'] / 100);
+        if ($discountedPrice < $datafactor['price_productMain']) {
+            $discountedPrice = $datafactor['price_productMain'];
+        }
+        $datafactor['price_product'] = intval($discountedPrice);
     }
     if (intval($datafactor['price_product']) != 0) {
         $Balance_prim = $user['Balance'] - $datafactor['price_product'];
@@ -1206,6 +1207,10 @@ if ($text == $text_bot_var['btn_keyboard']['buy'] && $setting['active_step_note'
     }
     $Balancebot = $userbotbalance['Balance'] - $datafactor['price_productMain'];
     update("user", "Balance", $Balancebot, "id", $userbotbalance['id']);
+    $invoiceNote = select("invoice", "note", "username", $username_ac, "select")['note'] ?? '';
+    $noteWithMeta = preg_replace('/__m:\d+/', '', $invoiceNote);
+    $noteWithMeta = '__m:' . intval($datafactor['price_productMain']) . ($noteWithMeta !== '' ? '|' . $noteWithMeta : '');
+    update("invoice", "note", $noteWithMeta, "username", $username_ac);
     if ($marzban_list_get['MethodUsername'] == "متن دلخواه + عدد ترتیبی" || $marzban_list_get['MethodUsername'] == "نام کاربری + عدد به ترتیب" || $marzban_list_get['MethodUsername'] == "آیدی عددی+عدد ترتیبی" || $marzban_list_get['MethodUsername'] == "متن دلخواه نماینده + عدد ترتیبی") {
         $value = intval($user['number_username']) + 1;
         update("user", "number_username", $value, "id", $from_id);
@@ -1430,6 +1435,18 @@ $textonebuy
     $Percent = round($Percent, 2);
     $keyboardsetting = ['inline_keyboard' => []];
     $keyboarddateservies = array(
+        'updateinfo' => array(
+            'text' => "♻️ بروزرسانی اطلاعات",
+            'callback_data' => "product_"
+        ),
+        'linksub' => array(
+            'text' => "🔗 دریافت کانفیگ",
+            'callback_data' => "subscriptionurl_"
+        ),
+        'config' => array(
+            'text' => "📋 لینک اشتراک",
+            'callback_data' => "config_"
+        ),
         'extend' => array(
             'text' => $textbotlang['users']['extend']['title'],
             'callback_data' => "extend_"
@@ -1438,9 +1455,32 @@ $textonebuy
             'text' => $textbotlang['users']['changelink']['btntitle'],
             'callback_data' => "changelink_"
         ),
+        'Extra_volume' => array(
+            'text' => "➕ خرید حجم اضافه",
+            'callback_data' => "Extra_volume_"
+        ),
+        'renameservice' => array(
+            'text' => "✏️ تغییر نام سرویس",
+            'callback_data' => "renameservice_"
+        ),
+        'changestatus' => array(
+            'text' => $DataUserOut['status'] == "active" ? "❌ خاموش کردن اکانت" : "💡 روشن کردن اکانت",
+            'callback_data' => "changestatus_"
+        ),
     );
     if ($marzban['status_extend'] == "off_extend") {
         unset($keyboarddateservies['extend']);
+        unset($keyboarddateservies['Extra_volume']);
+    }
+    if ($marzban['sublink'] != "onsublink") {
+        unset($keyboarddateservies['linksub']);
+    }
+    if ($marzban['config'] != "onconfig") {
+        unset($keyboarddateservies['config']);
+    }
+    if (in_array($marzban['type'], ['ibsng', 'mikrotik', 'WGDashboard', 'hiddify'])) {
+        unset($keyboarddateservies['changestatus']);
+        unset($keyboarddateservies['changelink']);
     }
     if (count($keyboarddateservies) != 0) {
         $tempArrayservices = [];
@@ -1461,27 +1501,21 @@ $textonebuy
         $textinfo = "وضعیت سرویس : <b>$status_var</b>
     نام کاربری سرویس : {$DataUserOut['username']}
     📎 کد پیگیری سرویس : {$nameloc['id_invoice']}
-    
-    📌 اطلاعات سرویس : 
+
+    📌 اطلاعات سرویس :
     {$userinfo['contentrecord']}";
         Editmessagetext($from_id, $message_id, $textinfo, $keyboardsetting);
         return;
     }
-    $output = "";
-    $config = "";
-    if ($marzban['sublink'] == "onsublink") {
-        $output = $DataUserOut['subscription_url'];
-    }
-    if ($marzban['config'] == "onconfig") {
-        $config = $DataUserOut['links'][0];
-    }
     #-----------------------------#
     $keyboardsetting = json_encode($keyboardsetting);
+    $noteRaw = $nameloc['note'] ?? '';
+    if (preg_match('/__name:(.+)/', $noteRaw, $nm)) { $displayName = $nm[1]; } else { $displayName = $DataUserOut['username']; }
     if (!in_array($status, ["active", "on_hold", "disabled", "Unknown"])) {
         $textinfo = "وضعیت سرویس : <b>$status_var</b>
-نام کاربری سرویس : {$DataUserOut['username']}
-موقعیت سرویس :{$nameloc['Service_location']}
-مدت زمان سرویس :{$nameloc['Service_time']} روز
+نام سرویس : $displayName
+موقعیت سرویس : {$nameloc['Service_location']}
+مدت زمان سرویس : {$nameloc['Service_time']} روز
 
 📶 اخرین زمان اتصال شما : $lastonline
 
@@ -1489,44 +1523,30 @@ $textonebuy
 📥 حجم مصرفی : $usedTrafficGb
 💢 حجم باقی مانده : $RemainingVolume ($Percent%)
 
-📅 فعال تا تاریخ : $expirationDate ($day) 
-
-
-لینک اتصال : 
-    
-<code>$config</code>
-
-<code>$output</code>
+📅 فعال تا تاریخ : $expirationDate ($day)
 ";
     } else {
         if ($DataUserOut['sub_updated_at'] !== null) {
             $textinfo = "وضعیت سرویس : $status_var
-👤 نام سرویس : {$DataUserOut['username']}
-🌍 موقعیت سرویس :{$nameloc['Service_location']}
-🖇 کد سرویس:{$nameloc['id_invoice']}
+👤 نام سرویس : $displayName
+🌍 موقعیت سرویس : {$nameloc['Service_location']}
+🖇 کد سرویس : {$nameloc['id_invoice']}
 
-        
 🔋 حجم سرویس : $LastTraffic
 📥 حجم مصرفی : $usedTrafficGb
 💢 حجم باقی مانده : $RemainingVolume ($Percent%)
 
 📅 فعال تا تاریخ : $expirationDate ($day)
 
-
 📶 اخرین زمان اتصال  : $lastonline
 🔄 اخرین زمان آپدیت لینک اشتراک  : $lastupdate
-#️⃣ کلاینت متصل شده :<code>{$DataUserOut['sub_last_user_agent']}</code>
-
-لینک اتصال : 
-    
-$config
-$output
+#️⃣ کلاینت متصل شده : <code>{$DataUserOut['sub_last_user_agent']}</code>
 ";
         } else {
             $textinfo = "وضعیت سرویس : $status_var
-👤 نام سرویس : {$DataUserOut['username']}
-🌍 موقعیت سرویس :{$nameloc['Service_location']}
-🖇 کد سرویس:{$nameloc['id_invoice']}
+👤 نام سرویس : $displayName
+🌍 موقعیت سرویس : {$nameloc['Service_location']}
+🖇 کد سرویس : {$nameloc['id_invoice']}
 
 🔋 حجم سرویس : $LastTraffic
 📥 حجم مصرفی : $usedTrafficGb
@@ -1535,17 +1555,234 @@ $output
 📅 فعال تا تاریخ : $expirationDate ($day)
 
 📶 اخرین زمان اتصال شما : $lastonline
-        
-
-لینک اتصال : 
-    
-<code>$config</code>
-
-<code>$output</code>
 ";
         }
     }
     Editmessagetext($from_id, $message_id, $textinfo, $keyboardsetting);
+} elseif (preg_match('/subscriptionurl_(\w+)/', $datain, $dataget)) {
+    $id_invoice = $dataget[1];
+    $nameloc = select("invoice", "*", "id_invoice", $id_invoice, "select");
+    $isAdmin = in_array($from_id, $admin_ids_decoded) || in_array($from_id, $admin_idsmain);
+    if (!$nameloc || ($nameloc['id_user'] != $from_id && !$isAdmin)) return;
+    $DataUserOut = $ManagePanel->DataUser($nameloc['Service_location'], $nameloc['username']);
+    if ($DataUserOut['status'] == "Unsuccessful") {
+        sendmessage($from_id, $textbotlang['users']['stateus']['error'], null, 'html');
+        return;
+    }
+    $marzban_list_get = select("marzban_panel", "*", "name_panel", $nameloc['Service_location'], "select");
+    $subscriptionurl = $DataUserOut['subscription_url'];
+    $backCallback = $isAdmin && $nameloc['id_user'] != $from_id ? "manageinvoicereseller_" . $nameloc['id_invoice'] : "product_" . $nameloc['id_invoice'];
+    $bakinfos = json_encode(['inline_keyboard' => [[['text' => $textbotlang['users']['stateus']['backinfo'], 'callback_data' => $backCallback]]]]);
+    update("user", "Processing_value", $nameloc['username'], "id", $from_id);
+    if ($marzban_list_get['type'] == "WGDashboard") {
+        $urlimage = "{$marzban_list_get['inboundid']}_{$nameloc['username']}.conf";
+        file_put_contents($urlimage, $subscriptionurl);
+        telegram('senddocument', ['chat_id' => $from_id, 'document' => new CURLFile($urlimage), 'reply_markup' => $bakinfos, 'caption' => "فایل اشتراک شما", 'parse_mode' => "HTML"]);
+        unlink($urlimage);
+    } else {
+        $textsub = "{$textbotlang['users']['stateus']['linksub']}\n\n<code>$subscriptionurl</code>";
+        $urlimage = runtimeTempPath("sub_qr_{$from_id}", '.png');
+        $qrCode = createqrcode($subscriptionurl);
+        file_put_contents($urlimage, $qrCode->getString());
+        addBackgroundImage($urlimage, $qrCode, $Pathfiles . 'images.jpg');
+        telegram('sendphoto', ['chat_id' => $from_id, 'photo' => new CURLFile($urlimage), 'reply_markup' => $bakinfos, 'caption' => $textsub, 'parse_mode' => "HTML"]);
+        unlink($urlimage);
+    }
+} elseif (preg_match('/config_(\w+)/', $datain, $dataget)) {
+    $id_invoice = $dataget[1];
+    $nameloc = select("invoice", "*", "id_invoice", $id_invoice, "select");
+    if (!$nameloc || $nameloc['id_user'] != $from_id) return;
+    $DataUserOut = $ManagePanel->DataUser($nameloc['Service_location'], $nameloc['username']);
+    if ($DataUserOut['status'] == "Unsuccessful") {
+        sendmessage($from_id, $textbotlang['users']['stateus']['error'], null, 'html');
+        return;
+    }
+    if (!is_array($DataUserOut['links'])) {
+        sendmessage($from_id, "❌ خطا در خواندن اطلاعات کانفیگ با پشتیبانی در ارتباط باشید.", null, 'html');
+        return;
+    }
+    deletemessage($from_id, $message_id);
+    $backKb = json_encode(['inline_keyboard' => [[['text' => $textbotlang['users']['stateus']['backinfo'], 'callback_data' => "product_{$nameloc['id_invoice']}"]]]]);
+    foreach ($DataUserOut['links'] as $i => $link) {
+        $urlimage = runtimeTempPath("config_qr_{$from_id}_{$i}", '.png');
+        $qrCode = createqrcode($link);
+        file_put_contents($urlimage, $qrCode->getString());
+        addBackgroundImage($urlimage, $qrCode, $Pathfiles . 'images.jpg');
+        $isLast = ($i === array_key_last($DataUserOut['links']));
+        telegram('sendphoto', [
+            'chat_id'      => $from_id,
+            'photo'        => new CURLFile($urlimage),
+            'caption'      => formatConfigLinksForDelivery([$link]),
+            'parse_mode'   => "HTML",
+            'reply_markup' => $isLast ? $backKb : null,
+        ]);
+        unlink($urlimage);
+    }
+} elseif (preg_match('/configget_(.*)_(.*)/', $datain, $dataget)) {
+    $id_invoice = $dataget[1];
+    $nameloc = select("invoice", "*", "id_invoice", $id_invoice, "select");
+    if (!$nameloc || $nameloc['id_user'] != $from_id) return;
+    $DataUserOut = $ManagePanel->DataUser($nameloc['Service_location'], $nameloc['username']);
+    $bakinfos = json_encode(['inline_keyboard' => [[['text' => $textbotlang['users']['stateus']['backinfo'], 'callback_data' => "product_" . $nameloc['id_invoice']]]]]);
+    if ($DataUserOut['status'] == "Unsuccessful") {
+        sendmessage($from_id, $textbotlang['users']['stateus']['error'], null, 'html');
+        return;
+    }
+    if ($dataget[2] == "1520") {
+        for ($i = 0; $i < count($DataUserOut['links']); ++$i) {
+            $urlimage = runtimeTempPath("config_qr_{$from_id}_{$i}", '.png');
+            $qrCode = createqrcode($DataUserOut['links'][$i]);
+            file_put_contents($urlimage, $qrCode->getString());
+            addBackgroundImage($urlimage, $qrCode, $Pathfiles . 'images.jpg');
+            telegram('sendphoto', ['chat_id' => $from_id, 'photo' => new CURLFile($urlimage), 'caption' => formatConfigLinksForDelivery([$DataUserOut['links'][$i]]), 'parse_mode' => "HTML"]);
+            unlink($urlimage);
+        }
+        return;
+    }
+    $urlimage = runtimeTempPath("config_qr_{$from_id}", '.png');
+    $qrCode = createqrcode($DataUserOut['links'][$dataget[2]]);
+    file_put_contents($urlimage, $qrCode->getString());
+    addBackgroundImage($urlimage, $qrCode, $Pathfiles . 'images.jpg');
+    telegram('sendphoto', ['chat_id' => $from_id, 'photo' => new CURLFile($urlimage), 'caption' => formatConfigLinksForDelivery([$DataUserOut['links'][$dataget[2]]]), 'parse_mode' => "HTML"]);
+    unlink($urlimage);
+} elseif (preg_match('/changestatus_(\w+)/', $datain, $dataget)) {
+    $id_invoice = $dataget[1];
+    $nameloc = select("invoice", "*", "id_invoice", $id_invoice, "select");
+    if (!$nameloc || $nameloc['id_user'] != $from_id) return;
+    if ($nameloc['Status'] == "disablebyadmin") {
+        sendmessage($from_id, "❌ این قابلیت درحال حاضر در دسترس نیست", null, 'html');
+        return;
+    }
+    $DataUserOut = $ManagePanel->DataUser($nameloc['Service_location'], $nameloc['username']);
+    if ($DataUserOut['status'] == "on_hold") {
+        sendmessage($from_id, "❌ هنوز به کانفیگ متصل نشده اید و امکان تغییر وضعیت سرویس وجود ندارد.", null, 'html');
+        return;
+    }
+    if ($DataUserOut['status'] == "Unsuccessful") {
+        sendmessage($from_id, $textbotlang['users']['stateus']['error'], null, 'html');
+        return;
+    }
+    $backbtn = json_encode(['inline_keyboard' => [[['text' => $textbotlang['users']['stateus']['backinfo'], 'callback_data' => "product_" . $nameloc['id_invoice']]]]]);
+    if ($DataUserOut['status'] == "active") {
+        $confirmdisable = json_encode(['inline_keyboard' => [[['text' => '✅ تایید و غیرفعال کردن', 'callback_data' => "confirmaccountdisable_" . $id_invoice]], [['text' => $textbotlang['users']['stateus']['backinfo'], 'callback_data' => "product_" . $nameloc['id_invoice']]]]]);
+        Editmessagetext($from_id, $message_id, "📌 با تایید زیر کانفیگ شما خاموش می‌شود.", $confirmdisable);
+    } else {
+        $confirmdisable = json_encode(['inline_keyboard' => [[['text' => '✅ تایید و فعال کردن', 'callback_data' => "confirmaccountdisable_" . $id_invoice]], [['text' => $textbotlang['users']['stateus']['backinfo'], 'callback_data' => "product_" . $nameloc['id_invoice']]]]]);
+        Editmessagetext($from_id, $message_id, "📌 با تایید زیر کانفیگ شما روشن می‌شود.", $confirmdisable);
+    }
+} elseif (preg_match('/confirmaccountdisable_(\w+)/', $datain, $dataget)) {
+    $id_invoice = $dataget[1];
+    $nameloc = select("invoice", "*", "id_invoice", $id_invoice, "select");
+    if (!$nameloc || $nameloc['id_user'] != $from_id) return;
+    $bakinfos = json_encode(['inline_keyboard' => [[['text' => $textbotlang['users']['stateus']['backinfo'], 'callback_data' => "product_" . $nameloc['id_invoice']]]]]);
+    $dataoutput = $ManagePanel->Change_status($nameloc['username'], $nameloc['Service_location']);
+    if ($dataoutput['status'] == "Unsuccessful") {
+        Editmessagetext($from_id, $message_id, $textbotlang['users']['stateus']['notchanged'], $bakinfos);
+        return;
+    }
+    $DataUserOut = $ManagePanel->DataUser($nameloc['Service_location'], $nameloc['username']);
+    if ($DataUserOut['status'] == "active") {
+        Editmessagetext($from_id, $message_id, $textbotlang['users']['stateus']['activedconfig'], $bakinfos);
+    } else {
+        Editmessagetext($from_id, $message_id, $textbotlang['users']['stateus']['disabledconfig'], $bakinfos);
+    }
+} elseif (preg_match('/renameservice_(\w+)/', $datain, $dataget)) {
+    $id_invoice = $dataget[1];
+    $invoice = select("invoice", "*", "id_invoice", $id_invoice, "select");
+    $isAdmin = in_array($from_id, $admin_ids_decoded) || in_array($from_id, $admin_idsmain);
+    if (!$invoice || ($invoice['id_user'] != $from_id && !$isAdmin)) {
+        sendmessage($from_id, "❌ سرویس یافت نشد.", null, 'html');
+        return;
+    }
+    $backCallback = $isAdmin && $invoice['id_user'] != $from_id ? "manageinvoicereseller_" . $id_invoice : "product_" . $id_invoice;
+    update("user", "Processing_value", $id_invoice, "id", $from_id);
+    $backinfoss = json_encode(['inline_keyboard' => [[['text' => $textbotlang['users']['stateus']['backinfo'], 'callback_data' => $backCallback]]]]);
+    $noteRawRename = $invoice['note'] ?? '';
+    if (preg_match('/__name:(.+)/', $noteRawRename, $nm)) { $currentDisplay = $nm[1]; } else { $currentDisplay = $invoice['username']; }
+    Editmessagetext($from_id, $message_id, "✏️ نام فعلی سرویس: <code>$currentDisplay</code>\n\nنام جدید را وارد کنید:", $backinfoss);
+    step("getrenameservice", $from_id);
+} elseif ($user['step'] == "getrenameservice") {
+    $id_invoice = $user['Processing_value'];
+    $invoice = select("invoice", "*", "id_invoice", $id_invoice, "select");
+    $isAdmin = in_array($from_id, $admin_ids_decoded) || in_array($from_id, $admin_idsmain);
+    if (!$invoice || ($invoice['id_user'] != $from_id && !$isAdmin)) {
+        sendmessage($from_id, "❌ سرویس یافت نشد.", $keyboard, 'html');
+        step("home", $from_id);
+        return;
+    }
+    $backCallback = $isAdmin && $invoice['id_user'] != $from_id ? "manageinvoicereseller_" . $id_invoice : "product_" . $id_invoice;
+    $backinfoss = json_encode(['inline_keyboard' => [[['text' => $textbotlang['users']['stateus']['backinfo'], 'callback_data' => $backCallback]]]]);
+    if (mb_strlen($text) < 1 || mb_strlen($text) > 32) {
+        sendmessage($from_id, "❌ نام نامعتبر است. بین ۱ تا ۳۲ کاراکتر وارد کنید.", $backinfoss, 'html');
+        return;
+    }
+    $existingMeta = select("invoice", "note", "id_invoice", $id_invoice, "select")['note'] ?? '';
+    preg_match('/__m:(\d+)/', $existingMeta, $metaMatch);
+    $metaPrefix = isset($metaMatch[0]) ? $metaMatch[0] . '|' : '';
+    update("invoice", "note", $metaPrefix . '__name:' . $text, "id_invoice", $id_invoice);
+    step("home", $from_id);
+    sendmessage($from_id, "✅ نام سرویس به <code>$text</code> تغییر یافت.", $backinfoss, 'html');
+} elseif (preg_match('/Extra_volume_(\w+)/', $datain, $dataget)) {
+    $id_invoice = $dataget[1];
+    $nameloc = select("invoice", "*", "id_invoice", $id_invoice, "select");
+    if (!$nameloc || $nameloc['id_user'] != $from_id) return;
+    $marzban_list_get = select("marzban_panel", "*", "name_panel", $nameloc['Service_location'], "select");
+    if ($marzban_list_get['status_extend'] == "off_extend") {
+        sendmessage($from_id, "❌ امکان خرید حجم اضافه در این پنل وجود ندارد", null, 'html');
+        return;
+    }
+    $DataUserOut = $ManagePanel->DataUser($nameloc['Service_location'], $nameloc['username']);
+    if ($DataUserOut['status'] == "Unsuccessful") {
+        sendmessage($from_id, $textbotlang['users']['stateus']['error'], null, 'html');
+        return;
+    }
+    $eextraprice = json_decode($marzban_list_get['priceextravolume'], true);
+    $extrapricevalue = $eextraprice[$userbot['agent']];
+    update("user", "Processing_value", $nameloc['id_invoice'], "id", $from_id);
+    $bakinfos = json_encode(['inline_keyboard' => [[['text' => $textbotlang['users']['stateus']['backinfo'], 'callback_data' => "product_" . $nameloc['id_invoice']]]]]);
+    $textextra = "⭕️ مقدار حجمی که می‌خواهید خریداری کنید را ارسال کنید (گیگابایت).\n⚠️ هر گیگ حجم اضافه $extrapricevalue تومان است.";
+    Editmessagetext($from_id, $message_id, $textextra, $bakinfos);
+    step('getvolumeextra', $from_id);
+} elseif ($user['step'] == "getvolumeextra") {
+    if (!ctype_digit($text) || intval($text) < 1) {
+        sendmessage($from_id, "❌ مقدار نامعتبر است. یک عدد صحیح بزرگتر از صفر ارسال کنید.", $backuser, 'HTML');
+        return;
+    }
+    $nameloc = select("invoice", "*", "id_invoice", $user['Processing_value'], "select");
+    $marzban_list_get = select("marzban_panel", "*", "name_panel", $nameloc['Service_location'], "select");
+    $eextraprice = json_decode($marzban_list_get['priceextravolume'], true);
+    $extrapricevalue = $eextraprice[$userbot['agent']];
+    $priceextra = $extrapricevalue * intval($text);
+    $keyboardconfirm = json_encode(['inline_keyboard' => [[['text' => "✅ پرداخت و افزودن حجم", 'callback_data' => 'confirmaextra-' . $priceextra]]]]);
+    $priceextraFmt = number_format($priceextra);
+    $extrapricevalueFmt = number_format($extrapricevalue);
+    $textextra = "📜 فاکتور خرید حجم اضافه\n\n📌 تعرفه هر گیگابایت: $extrapricevalueFmt تومان\n🔋 حجم اضافه: $text گیگابایت\n💰 مبلغ: $priceextraFmt تومان\n\n✅ برای پرداخت روی دکمه زیر کلیک کنید";
+    sendmessage($from_id, $textextra, $keyboardconfirm, 'HTML');
+    step('home', $from_id);
+} elseif (preg_match('/confirmaextra-(\w+)/', $datain, $dataget)) {
+    $volume = $dataget[1];
+    $nameloc = select("invoice", "*", "id_invoice", $user['Processing_value'], "select");
+    if (!$nameloc || !in_array($nameloc['Status'], ['active', 'end_of_time', 'end_of_volume', 'sendedwarn', 'send_on_hold'])) {
+        sendmessage($from_id, "❌ خطا در پردازش. لطفاً مجدد تلاش کنید.", null, 'HTML');
+        return;
+    }
+    $marzban_list_get = select("marzban_panel", "*", "name_panel", $nameloc['Service_location'], "select");
+    $eextraprice = json_decode($marzban_list_get['priceextravolume'], true);
+    $extrapricevalue = $eextraprice[$userbot['agent']];
+    if ($user['Balance'] < $volume) {
+        $bakinfos = json_encode(['inline_keyboard' => [[['text' => $textbotlang['users']['stateus']['backinfo'], 'callback_data' => "account"]]]]);
+        Editmessagetext($from_id, $message_id, "❌ موجودی کافی نیست. لطفاً کیف پول خود را شارژ کنید.", $bakinfos, 'HTML');
+        return;
+    }
+    deletemessage($from_id, $message_id);
+    $valuevolume = intval($volume) / intval($extrapricevalue);
+    $newVolume = $DataUserOut['data_limit'] + ($valuevolume * 1073741824);
+    $ManagePanel->EditUser($nameloc['Service_location'], $nameloc['username'], ['data_limit' => $newVolume]);
+    $newbalance = $user['Balance'] - $volume;
+    update("user", "Balance", $newbalance, "id", $from_id);
+    $textresult = "✅ $valuevolume گیگابایت حجم اضافه با موفقیت به سرویس شما افزوده شد.";
+    $bakinfos = json_encode(['inline_keyboard' => [[['text' => "مشاهده سرویس", 'callback_data' => "product_" . $nameloc['id_invoice']]]]]);
+    sendmessage($from_id, $textresult, $bakinfos, 'HTML');
 } elseif (preg_match('/extend_(\w+)/', $datain, $dataget)) {
     $id_invoice = $dataget[1];
     savedata("clear", "id_invoice", $id_invoice);
@@ -1648,6 +1885,7 @@ $output
     $userdate = json_decode($user['Processing_value'], true);
     $nameloc = select("invoice", "*", "id_invoice", $userdate['id_invoice'], "select");
     $marzban_list_get = select("marzban_panel", "*", "name_panel", $nameloc['Service_location'], "select");
+    $isAdminExtendStep = !empty($userdate['admin_extend']);
     if ($user['step'] == "gettimecustomextend") {
         $maintime = json_decode($marzban_list_get['maintime'], true);
         $maintime = $maintime[$userbot['agent']];
@@ -1660,18 +1898,22 @@ $output
         }
         $custompricevalue = $setting['pricevolume'];
         $customtimevalueprice = $setting['pricetime'];
+        $custompricevalueBot = $setting['minpricevolume'];
+        $customtimevaluepriceBot = $setting['minpricetime'];
         $datapish = array(
             "Volume_constraint" => $userdate['volume'],
             "name_product" => $textbotlang['users']['customsellvolume']['title'],
             "code_product" => "customvolume",
             "Service_time" => $text,
-            "price_product" => ($userdate['volume'] * $custompricevalue) + ($text * $customtimevalueprice)
+            "price_product" => ($userdate['volume'] * $custompricevalue) + ($text * $customtimevalueprice),
+            "price_productMain" => ($userdate['volume'] * $custompricevalueBot) + ($text * $customtimevaluepriceBot),
         );
         savedata("save", "time", $text);
     } else {
         $product = $dataget[1];
         savedata("save", "code_product", $product);
         $product = select("product", "*", "code_product", $product);
+        $priceproductmain = $product['price_product'];
         $productlist = json_decode(file_get_contents('product.json'), true);
         if (isset($productlist[$product['code_product']])) {
             $product['price_product'] = $productlist[$product['code_product']];
@@ -1681,15 +1923,27 @@ $output
             "name_product" => $product['name_product'],
             "code_product" => $product['code_product'],
             "Service_time" => $product['Service_time'],
-            "price_product" => $product['price_product']
+            "price_product" => $product['price_product'],
+            "price_productMain" => $priceproductmain,
         );
     }
-    $textextend = "📜 فاکتور تمدید شما برای نام کاربری {$nameloc['username']} ایجاد شد.
-        
-💸 مبلغ تمدید :{$datapish['price_product']}
+    $botbalance = select("botsaz", "*", "bot_token", $ApiToken, "select");
+    $userbotbalanceStep = select("user", "*", "id", $botbalance['id_user'], "select");
+    if ($isAdminExtendStep) {
+        $showPrice = $datapish['price_productMain'] ?? $datapish['price_product'];
+        $showBalance = $userbotbalanceStep['Balance'];
+        $balanceLabel = "💼 موجودی کیف اصلی نماینده";
+    } else {
+        $showPrice = $datapish['price_product'];
+        $showBalance = $user['Balance'];
+        $balanceLabel = "💸 موجودی کیف پول";
+    }
+    $textextend = "📜 فاکتور تمدید برای نام کاربری {$nameloc['username']} ایجاد شد.
+
+💸 مبلغ تمدید : $showPrice تومان
 ⏱ مدت زمان تمدید : {$datapish['Service_time']} روز
-🔋 حجم تمدید :{$datapish['Volume_constraint']} گیگ
-💸 موجودی کیف پول : {$user['Balance']}
+🔋 حجم تمدید : {$datapish['Volume_constraint']} گیگ
+$balanceLabel : $showBalance تومان
 ✅ برای تایید و تمدید سرویس روی دکمه زیر کلیک کنید";
     $keyboardextend = json_encode([
         'inline_keyboard' => [
@@ -1711,6 +1965,7 @@ $output
     Editmessagetext($from_id, $message_id, $text_inline, json_encode(['inline_keyboard' => []]));
     $id_invoice = $dataget[1];
     $userdate = json_decode($user['Processing_value'], true);
+    $isAdminExtend = !empty($userdate['admin_extend']);
     $nameloc = select("invoice", "*", "id_invoice", $id_invoice, "select");
     $marzban_list_get = select("marzban_panel", "*", "name_panel", $nameloc['Service_location'], "select");
     if ($marzban_list_get['status_extend'] == "off_extend") {
@@ -1760,7 +2015,7 @@ $output
         }
         return;
     }
-    if ($datafactor['price_product'] > $user['Balance'] && intval($datafactor['price_product']) != 0) {
+    if (!$isAdminExtend && $datafactor['price_product'] > $user['Balance'] && intval($datafactor['price_product']) != 0) {
         $marzbandirectpay = select("shopSetting", "*", "Namevalue", "statusdirectpabuy", "select")['value'];
         $Balance_prim = $datafactor['price_product'] - $user['Balance'];
         if ($Balance_prim <= 1)
@@ -1816,18 +2071,25 @@ $output
     $stmt->execute();
     $stmt->close();
     update("invoice", "Status", "active", "id_invoice", $id_invoice);
-    if (intval($datafactor['price_product']) != 0) {
+    if (!$isAdminExtend && intval($datafactor['price_product']) != 0) {
         $Balance_prim = $user['Balance'] - $datafactor['price_product'];
         $userbalance = json_decode(file_get_contents("data/$from_id/$from_id.json"), true);
         $userbalance['Balance'] = $Balance_prim;
         file_put_contents("data/$from_id/$from_id.json", json_encode($userbalance));
     }
-    if (intval($userbotbalance['pricediscount']) != 0) {
-        $resultper = ($datafactor['price_productMain'] * $userbotbalance['pricediscount']) / 100;
-        $datafactor['price_productMain'] = $datafactor['price_productMain'] - $resultper;
+    if (!$isAdminExtend && intval($user['pricediscount']) != 0) {
+        $discountedPrice = $datafactor['price_product'] - ($datafactor['price_product'] * $user['pricediscount'] / 100);
+        if ($discountedPrice < $datafactor['price_productMain']) {
+            $discountedPrice = $datafactor['price_productMain'];
+        }
+        $datafactor['price_product'] = intval($discountedPrice);
     }
     $Balancebot = $userbotbalance['Balance'] - $datafactor['price_productMain'];
     update("user", "Balance", $Balancebot, "id", $userbotbalance['id']);
+    $existingNote = select("invoice", "note", "id_invoice", $nameloc['id_invoice'], "select")['note'] ?? '';
+    $existingNote = preg_replace('/__m:\d+\|?/', '', $existingNote);
+    $newNote = '__m:' . intval($datafactor['price_productMain']) . ($existingNote !== '' ? '|' . $existingNote : '');
+    update("invoice", "note", $newNote, "id_invoice", $nameloc['id_invoice']);
     $keyboardextendfnished = json_encode([
         'inline_keyboard' => [
             [
@@ -1877,6 +2139,8 @@ $output
 } elseif (preg_match('/changelink_(\w+)/', $datain, $dataget)) {
     $id_invoice = $dataget[1];
     $nameloc = select("invoice", "*", "id_invoice", $id_invoice, "select");
+    $isAdmin = in_array($from_id, $admin_ids_decoded) || in_array($from_id, $admin_idsmain);
+    if (!$nameloc || ($nameloc['id_user'] != $from_id && !$isAdmin)) return;
     $marzban_list_get = select("marzban_panel", "*", "name_panel", $nameloc['Service_location'], "select");
     $DataUserOut = $ManagePanel->DataUser($nameloc['Service_location'], $nameloc['username']);
     if ($DataUserOut['status'] == "Unsuccessful") {
@@ -1887,13 +2151,14 @@ $output
         sendmessage($from_id, "❌ سرویس غیرفعال است و امکان تعویض لینک برای سرویس وجود ندارد.", null, 'html');
         return;
     }
+    $backCallback = $isAdmin && $nameloc['id_user'] != $from_id ? "manageinvoicereseller_" . $nameloc['id_invoice'] : "product_" . $nameloc['id_invoice'];
     $keyboardextend = json_encode([
         'inline_keyboard' => [
             [
                 ['text' => $textbotlang['users']['changelink']['confirm'], 'callback_data' => "confirmchange_" . $nameloc['id_invoice']],
             ],
             [
-                ['text' => $textbotlang['users']['stateus']['backinfo'], 'callback_data' => "product_" . $nameloc['id_invoice']],
+                ['text' => $textbotlang['users']['stateus']['backinfo'], 'callback_data' => $backCallback],
             ]
         ]
     ]);
@@ -1901,6 +2166,8 @@ $output
 } elseif (preg_match('/confirmchange_(\w+)/', $datain, $dataget)) {
     $id_invoice = $dataget[1];
     $nameloc = select("invoice", "*", "id_invoice", $id_invoice, "select");
+    $isAdmin = in_array($from_id, $admin_ids_decoded) || in_array($from_id, $admin_idsmain);
+    if (!$nameloc || ($nameloc['id_user'] != $from_id && !$isAdmin)) return;
     $marzban_list_get = select("marzban_panel", "*", "name_panel", $nameloc['Service_location'], "select");
     $DataUserOut = $ManagePanel->Revoke_sub($nameloc['Service_location'], $nameloc['username']);
     if ($DataUserOut['status'] == "Unsuccessful") {
@@ -1922,13 +2189,14 @@ $output
         }
         $output_config_link = $config;
     }
+    $backCallback = $isAdmin && $nameloc['id_user'] != $from_id ? "manageinvoicereseller_" . $nameloc['id_invoice'] : "product_" . $nameloc['id_invoice'];
     $textconfig = "✅ کانفیگ شما با موفقیت بروزرسانی گردید.
-اشتراک شما : 
+اشتراک شما :
 <code>$output_config_link</code>";
     $bakinfos = json_encode([
         'inline_keyboard' => [
             [
-                ['text' => $textbotlang['users']['stateus']['backinfo'], 'callback_data' => "product_" . $nameloc['id_invoice']],
+                ['text' => $textbotlang['users']['stateus']['backinfo'], 'callback_data' => $backCallback],
             ]
         ]
     ]);
