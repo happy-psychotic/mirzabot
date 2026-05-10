@@ -2312,9 +2312,19 @@ function sendMessageService($panel_info, $config, $sub_link, $username_service, 
     } else {
         sendmessage($user_id, $caption, $reply_markup, 'HTML');
     }
-    if ($panel_info['config'] == "onconfig" && $setting['status_keyboard_config'] == "1") {
-        if (is_array($config)) {
-            sendmessage($user_id, "📌 جهت دریافت کانفیگ روی دکمه دریافت کانفیگ کلیک کنید", keyboard_config($config, $invoice_id, false), 'HTML');
+    if ($panel_info['config'] == "onconfig" && is_array($config) && count($config) > 1) {
+        foreach ($config as $i => $link) {
+            $urlimage = runtimeTempPath("config_qr_{$user_id}_{$i}", '.png');
+            $qrCode = createqrcode($link);
+            file_put_contents($urlimage, $qrCode->getString());
+            addBackgroundImage($urlimage, $qrCode, $image);
+            telegram('sendphoto', [
+                'chat_id'    => $user_id,
+                'photo'      => new CURLFile($urlimage),
+                'caption'    => formatConfigLinksForDelivery([$link]),
+                'parse_mode' => "HTML",
+            ]);
+            unlink($urlimage);
         }
     }
 }
