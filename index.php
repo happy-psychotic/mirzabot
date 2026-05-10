@@ -2028,21 +2028,10 @@ $textconnect
             ]
         ]
     ]);
-    Editmessagetext($from_id, $message_id, $textconfig, $bakinfos);
-    if ($marzban_list_get['config'] == "onconfig" && is_array($DataUserOut['configs']) && count($DataUserOut['configs']) > 0) {
-        foreach ($DataUserOut['configs'] as $i => $link) {
-            $urlimage = runtimeTempPath("config_qr_{$from_id}_{$i}", '.png');
-            $qrCode = createqrcode($link);
-            file_put_contents($urlimage, $qrCode->getString());
-            addBackgroundImage($urlimage, $qrCode, 'images.jpg');
-            telegram('sendphoto', [
-                'chat_id'    => $from_id,
-                'photo'      => new CURLFile($urlimage),
-                'caption'    => formatConfigLinksForDelivery([$link]),
-                'parse_mode' => "HTML",
-            ]);
-            unlink($urlimage);
-        }
+    if ($marzban_list_get['config'] == "onconfig") {
+        Editmessagetext($from_id, $message_id, $textconfig, keyboard_config($DataUserOut['configs'], $nameloc['id_invoice'], true));
+    } else {
+        Editmessagetext($from_id, $message_id, $textconfig, $bakinfos);
     }
     $timejalali = jdate('Y/m/d H:i:s');
     $text_report = "📣 جزئیات تغییر لینک در ربات شما ثبت شد .
