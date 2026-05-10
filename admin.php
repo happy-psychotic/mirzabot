@@ -6245,12 +6245,33 @@ n2", $backadmin, 'HTML');
     } else {
         $namestatus = '💡 روشن کردن اکانت';
     }
+    $inv_id = $OrderUser['id_invoice'];
+    // Single-column rows for long labels, two-column for short ones
     $keyboardlists['inline_keyboard'][] = [
-        ['text' => $textbotlang['users']['extend']['title'], 'callback_data' => 'extendadmin_' . $OrderUser['id_invoice']],
-        ['text' => $textbotlang['users']['stateus']['config'], 'callback_data' => 'config_' . $OrderUser['id_invoice']],
+        ['text' => "♻️ بروزرسانی", 'callback_data' => "manageinvoice_{$inv_id}"],
     ];
     $keyboardlists['inline_keyboard'][] = [
-        ['text' => $namestatus, 'callback_data' => 'changestatusadmin_' . $OrderUser['id_invoice']],
+        ['text' => $textbotlang['users']['stateus']['config'],   'callback_data' => "config_{$inv_id}"],
+        ['text' => $textbotlang['users']['stateus']['linksub'],  'callback_data' => "subscriptionurl_{$inv_id}"],
+    ];
+    $keyboardlists['inline_keyboard'][] = [
+        ['text' => $textbotlang['users']['extend']['title'],     'callback_data' => "extendadmin_{$inv_id}"],
+        ['text' => $textbotlang['users']['Extra_volume']['sellextra'], 'callback_data' => "Extra_volume_{$inv_id}"],
+    ];
+    $keyboardlists['inline_keyboard'][] = [
+        ['text' => $textbotlang['users']['changelink']['btntitle'], 'callback_data' => "changelink_{$inv_id}"],
+        ['text' => '✏️ تغییر نام سرویس',                           'callback_data' => "renameservice_{$inv_id}"],
+    ];
+    $keyboardlists['inline_keyboard'][] = [
+        ['text' => $textbotlang['Admin']['transfor']['title'],   'callback_data' => "transfer_{$inv_id}"],
+        ['text' => $namestatus,                                  'callback_data' => "changestatusadmin_{$inv_id}"],
+    ];
+    $keyboardlists['inline_keyboard'][] = [
+        ['text' => $textbotlang['Admin']['ManageUser']['removeservice'],        'callback_data' => "removeservice-{$inv_id}"],
+        ['text' => $textbotlang['Admin']['ManageUser']['removeserviceandback'], 'callback_data' => "removeserviceandback-{$inv_id}"],
+    ];
+    $keyboardlists['inline_keyboard'][] = [
+        ['text' => "🗑 حذف کامل سرویس", 'callback_data' => "removefull-{$inv_id}"],
     ];
     $keyboard_json = json_encode($keyboardlists);
     sendmessage($from_id, $text_order, $keyboard_json, 'HTML');
