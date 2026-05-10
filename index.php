@@ -4055,11 +4055,44 @@ $textinvite
     if (intval($info_product['Volume_constraint']) == 0) {
         $textin = str_replace('گیگ', "", $textin);
     }
-    if ($user['step'] != "getvolumecustomuser" && !in_array($marzban_list_get['MethodUsername'], ["نام کاربری دلخواه", "نام کاربری دلخواه + عدد رندوم"])) {
-        Editmessagetext($from_id, $message_id, $textin, $payment);
+    if ($user['agent'] == 'n' && $parts[0] == 'customvolume') {
+        $agentCostFormatted = number_format($info_product['price_product']);
+        $askText = $textin . "\n\n💰 مبلغ تمام‌شده برای مشتری را وارد کنید (تومان):\n🔔 حداقل <b>{$agentCostFormatted}</b> تومان\n⬅️ برای قیمت عادی عدد <b>0</b> وارد کنید.";
+        if ($user['step'] != "getvolumecustomuser" && !in_array($marzban_list_get['MethodUsername'], ["نام کاربری دلخواه", "نام کاربری دلخواه + عدد رندوم"])) {
+            Editmessagetext($from_id, $message_id, $askText, $backuser);
+        } else {
+            sendmessage($from_id, $askText, $backuser, 'HTML');
+        }
+        step('get_customer_price', $from_id);
     } else {
-        sendmessage($from_id, $textin, $payment, 'HTML');
+        if ($user['step'] != "getvolumecustomuser" && !in_array($marzban_list_get['MethodUsername'], ["نام کاربری دلخواه", "نام کاربری دلخواه + عدد رندوم"])) {
+            Editmessagetext($from_id, $message_id, $textin, $payment);
+        } else {
+            sendmessage($from_id, $textin, $payment, 'HTML');
+        }
+        step('payment', $from_id);
     }
+} elseif ($user['step'] == 'get_customer_price') {
+    if (!ctype_digit(trim($text))) {
+        sendmessage($from_id, "❌ عدد معتبر وارد کنید.", $backuser, 'HTML');
+        return;
+    }
+    $userdate = json_decode($user['Processing_value'], true);
+    $parts    = explode("_", $user['Processing_value_one']);
+    $marzban_list_get     = select("marzban_panel", "*", "name_panel", $userdate['name_panel'], "select");
+    $custompricevalue     = intval(json_decode($marzban_list_get['pricecustomvolume'], true)[$user['agent']] ?? 0);
+    $customtimevalueprice = intval(json_decode($marzban_list_get['pricecustomtime'],   true)[$user['agent']] ?? 0);
+    $agentCost     = ($parts[2] * $custompricevalue) + ($parts[1] * $customtimevalueprice);
+    $customerPrice = intval($text);
+    if ($customerPrice !== 0 && $customerPrice < $agentCost) {
+        sendmessage($from_id, "❌ مبلغ وارد شده (" . number_format($customerPrice) . " تومان) کمتر از قیمت پایه شما (" . number_format($agentCost) . " تومان) است.", $backuser, 'HTML');
+        return;
+    }
+    $profit = ($customerPrice === 0) ? 0 : ($customerPrice - $agentCost);
+    $userdate['agent_profit'] = $profit;
+    update("user", "Processing_value", json_encode($userdate), "id", $from_id);
+    $profitText = $profit > 0 ? "\n\n💵 سود شما از این فروش: <b>" . number_format($profit) . "</b> تومان" : "";
+    sendmessage($from_id, "✅ ثبت شد.{$profitText}\n\nبرای تایید نهایی دکمه زیر را بزنید:", $payment, 'HTML');
     step('payment', $from_id);
 } elseif ($user['step'] == "payment" && $datain == "confirmandgetservice" || $datain == "confirmandgetserviceDiscount") {
     $userdate = json_decode($user['Processing_value'], true);
@@ -4293,6 +4326,13 @@ $textinvite
     if (intval($priceproduct) != 0) {
         $Balance_prim = $user['Balance'] - $priceproduct;
         update("user", "Balance", $Balance_prim, "id", $from_id);
+    }
+    // Credit agent profit if they entered a customer price higher than their cost
+    $agent_profit = intval($userdate['agent_profit'] ?? 0);
+    if ($user['agent'] == 'n' && $agent_profit > 0) {
+        $current_balance = intval(select("user", "Balance", "id", $from_id, "select")['Balance']);
+        update("user", "Balance", $current_balance + $agent_profit, "id", $from_id);
+        sendmessage($from_id, "💵 سود فروش <b>" . number_format($agent_profit) . "</b> تومان به کیف پول شما اضافه شد.", null, 'HTML');
     }
     if ($marzban_list_get['MethodUsername'] == "متن دلخواه + عدد ترتیبی" || $marzban_list_get['MethodUsername'] == "نام کاربری + عدد به ترتیب" || $marzban_list_get['MethodUsername'] == "آیدی عددی+عدد ترتیبی" || $marzban_list_get['MethodUsername'] == "متن دلخواه نماینده + عدد ترتیبی") {
         $value = intval($user['number_username']) + 1;
