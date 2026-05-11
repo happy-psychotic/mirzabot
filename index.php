@@ -406,9 +406,11 @@ if (preg_match('~^(?:vless|vmess|ss|trojan)://[^\s]+#(\S+)~i', trim($text), $cfg
         $stmtCfgOwn->execute([':u' => $cfgUsername, ':uid' => $from_id]);
         $cfgOwnRow = $stmtCfgOwn->fetch(PDO::FETCH_ASSOC);
         if ($cfgOwnRow) {
-            // Own config — show full service management by routing to product_ handler
+            // Own config — route to product_ handler; reset step so no other handler intercepts
             $datain = "product_" . $cfgOwnRow['id_invoice'];
-            $text   = "";
+            $text   = "x";
+            step('home', $from_id);
+            $user['step'] = 'home';
         } else {
             // Not owner — show volume info only and stop
             $stmtCfgAny = $pdo->prepare("SELECT Service_location, username FROM invoice WHERE username = :u LIMIT 1");
