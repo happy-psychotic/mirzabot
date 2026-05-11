@@ -1068,7 +1068,7 @@ if ($text == $text_bot_var['btn_keyboard']['buy'] && $setting['active_step_note'
         }
         update("invoice", "Status", "Unsuccessful", "id_invoice", $randomString);
         sendmessage($from_id, $textbotlang['users']['sell']['ErrorConfig'], $keyboard, 'HTML');
-        sendmessage($from_id, "💳 مبلغی از کیف پول شما کسر نشده است. لطفاً مجدداً تلاش کنید.", $keyboard, 'HTML');
+        sendmessage($from_id, "⚠️ در ساخت سرویس خطایی رخ داد.\n💳 مبلغی از کیف پول شما کسر نشده است.\n⏳ لطفاً چند دقیقه صبر کنید و مجدداً تلاش کنید.", $keyboard, 'HTML');
         $texterros = "⭕️ خطای ساخت اشتراک  در ربات نماینده
 ✍️ دلیل خطا :
 {$errorMessage}
