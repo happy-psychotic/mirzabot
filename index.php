@@ -927,6 +927,8 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
         } elseif ($datain == "productcheckdata") {
             deletemessage($from_id, $message_id);
             sendmessage($from_id, $textinfo, $keyboardsetting, 'html');
+        } elseif (empty($update['callback_query'])) {
+            sendmessage($from_id, $textinfo, $keyboardsetting, 'html');
         } else {
             Editmessagetext($from_id, $message_id, $textinfo, $keyboardsetting);
         }
@@ -1174,6 +1176,9 @@ $textconnect
         sendmessage($from_id, $textinfo, $keyboardsetting, 'html');
     } elseif ($datain == "productcheckdata") {
         deletemessage($from_id, $message_id);
+        sendmessage($from_id, $textinfo, $keyboardsetting, 'html');
+    } elseif (empty($update['callback_query'])) {
+        // Arrived from a text message (e.g. config link) — must sendmessage, not editMessageText
         sendmessage($from_id, $textinfo, $keyboardsetting, 'html');
     } else {
         Editmessagetext($from_id, $message_id, $textinfo, $keyboardsetting);
