@@ -1470,9 +1470,9 @@ $textonebuy
             'callback_data' => "changestatus_"
         ),
     );
+    unset($keyboarddateservies['Extra_volume']);
     if ($marzban['status_extend'] == "off_extend") {
         unset($keyboarddateservies['extend']);
-        unset($keyboarddateservies['Extra_volume']);
     }
     if ($marzban['sublink'] != "onsublink") {
         unset($keyboarddateservies['linksub']);
