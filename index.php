@@ -4430,6 +4430,13 @@ $textinvite
         ]
     ]);
     $timejalali = jdate('Y/m/d H:i:s');
+    $agent_profit_report = '';
+    if ($user['agent'] == 'n' && $agent_profit >= 0) {
+        $customerPriceForReport = $priceproduct + $agent_profit;
+        $agent_profit_report = "\n▫️قیمت مشتری : " . number_format($customerPriceForReport) . " تومان" .
+                               "\n▫️سود نماینده : " . number_format($agent_profit) . " تومان" .
+                               "\n▫️هزینه نماینده : رایگان (بدون کسر از کیف پول)";
+    }
     $text_report = "📣 جزئیات ساخت اکانت در ربات شما ثبت شد .
 
 $textonebuy
@@ -4448,7 +4455,7 @@ $textonebuy
 ▫️شماره تلفن کاربر : {$user['number']}
 ▫️دسته بندی محصول : {$info_product['category']}
 ▫️قیمت محصول : {$info_product['price_product']} تومان
-▫️قیمت نهایی : $priceproduct تومان
+▫️قیمت نهایی : $priceproduct تومان$agent_profit_report
 ▫️زمان خرید : $timejalali";
     if (strlen($setting['Channel_Report']) > 0) {
         telegram('sendmessage', [
