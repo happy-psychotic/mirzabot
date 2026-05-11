@@ -162,6 +162,15 @@ function addClient($namepanel, $usernameac, $Expire, $Total, $Uuid, $Flow, $subi
     $req->setHeaders($headers);
     $req->setCookie($cookieFile);
     $response = $req->post($configpanel);
+    if (($response['status'] ?? 0) == 404) {
+        @unlink($cookieFile);
+        login($marzban_list_get['code_panel'], false);
+        $cookieFile = getPanelCookieFile($marzban_list_get['code_panel']);
+        $req2 = new CurlRequest($url);
+        $req2->setHeaders($headers);
+        $req2->setCookie($cookieFile);
+        $response = $req2->post($configpanel);
+    }
     @unlink($cookieFile);
     return $response;
 }
