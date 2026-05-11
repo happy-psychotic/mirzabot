@@ -31,25 +31,39 @@ git -C "$REPO_ROOT" archive "$REF" | tar -x -C "$TMP_DIR"
 chmod 755 "$TMP_DIR"
 
 RSYNC_EXCLUDES=(
+  # git metadata
   --exclude '.git/'
+  # server-local config — never overwrite
   --exclude 'config.php'
+  --exclude 'config.php.bak'
   --exclude 'vpnbot/Default/config.php'
   --exclude 'vpnbot/update/config.php'
+  # runtime logs and cookies
   --exclude 'error_log'
-  --exclude 'cronbot/error_log'
-  --exclude 'cronbot/log.txt'
   --exclude 'log.txt'
   --exclude 'cookie.txt'
+  --exclude 'cronbot/error_log'
+  --exclude 'cronbot/log.txt'
   --exclude 'api/log.txt'
-  --exclude 'storage/'
   --exclude 'sub/cookie.txt'
-  --exclude 'config.php.bak'
+  # runtime storage and temp files
+  --exclude 'storage/'
+  --exclude '.cache/'
   --exclude '*.png'
   --exclude '*.jpg'
-  --exclude 'vpnbot/[0-9]*/'
-  --exclude 'vpnbot/*_bot/'
+  # gitignored server-side dirs — exist on server but not in git, --delete would wipe them
+  --exclude 'vendor/'
+  --exclude 'panel/'
+  --exclude 'payment/'
+  --exclude 'ibsng/'
+  --exclude 'ibsng.php'
+  --exclude 'agent_panel.php'
+  --exclude 'panels.php'
   --exclude 'docs/'
   --exclude 'PROJECT_UPDATE.md'
+  # live reseller bot instances — managed by sync_reseller_templates.sh
+  --exclude 'vpnbot/[0-9]*/'
+  --exclude 'vpnbot/*_bot/'
 )
 
 RSYNC_ARGS=(-az --delete --itemize-changes --chmod=D755,F644 "${RSYNC_EXCLUDES[@]}")
