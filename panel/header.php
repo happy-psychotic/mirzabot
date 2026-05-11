@@ -72,6 +72,12 @@
                           <i class="icon-credit-card"></i>
                           <span>تراکنش ها</span>
                       </a>
+                  </li>
+                  <li>
+                      <a href="pending_receipts.php">
+                          <i class="icon-time"></i>
+                          <span>رسیدهای تایید نشده</span>
+                      </a>
                   </li>   
                   <li>
                       <a href="cancelService.php">
