@@ -103,14 +103,22 @@ function ap_service_info_keyboard(array $invoice, array $dataUser, string $back_
 
     $keyboard = [
         'inline_keyboard' => [
-            [['text' => "♻️ بروزرسانی اطلاعات",  'callback_data' => "ap_refresh_{$id}"]],
-            [['text' => "⚙️ دریافت همه کانفیگ ها", 'callback_data' => "ap_allconfigs_{$id}"]],
-            [['text' => "🔄 تغییر لینک اشتراک",   'callback_data' => "ap_resetlink_{$id}"]],
-            [['text' => "✏️ تغییر نام سرویس",      'callback_data' => "ap_rename_{$id}"]],
-            [['text' => $toggle_text,               'callback_data' => "ap_toggle_{$id}"]],
-            [['text' => "⏳ تمدید سرویس",            'callback_data' => "ap_extend_{$id}"]],
-            [['text' => "🔀 انتقال سرویس",           'callback_data' => "ap_transfer_{$id}"]],
-            [['text' => "↩️ بازگشت", 'callback_data' => $back_cb]],
+            [
+                ['text' => "♻️ بروزرسانی اطلاعات",  'callback_data' => "ap_refresh_{$id}"],
+                ['text' => "⚙️ دریافت همه کانفیگ ها", 'callback_data' => "ap_allconfigs_{$id}"],
+            ],
+            [
+                ['text' => "🔄 تغییر لینک اشتراک",   'callback_data' => "ap_resetlink_{$id}"],
+                ['text' => "✏️ تغییر نام سرویس",      'callback_data' => "ap_rename_{$id}"],
+            ],
+            [
+                ['text' => $toggle_text,               'callback_data' => "ap_toggle_{$id}"],
+                ['text' => "⏳ تمدید سرویس",            'callback_data' => "ap_extend_{$id}"],
+            ],
+            [
+                ['text' => "🔀 انتقال سرویس",           'callback_data' => "ap_transfer_{$id}"],
+                ['text' => "↩️ بازگشت",                 'callback_data' => $back_cb],
+            ],
         ],
     ];
 
