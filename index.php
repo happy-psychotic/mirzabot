@@ -4190,7 +4190,9 @@ $textinvite
     $stmt->bind_param("sssssssssssss", $from_id, $randomString, $username_ac, $date, $marzban_list_get['name_panel'], $info_product['name_product'], $priceproduct, $info_product['Volume_constraint'], $info_product['Service_time'], $Status, $userdate['nameconfig'], $user['affiliates'], $notifctions);
     $stmt->execute();
     $stmt->close();
-    if ($priceproduct > $user['Balance'] && $user['agent'] != "n2" && intval($priceproduct) != 0) {
+    $agent_profit = intval($userdate['agent_profit'] ?? -1);
+    // If agent entered a customer price (profit >= 0), skip balance check entirely
+    if ($priceproduct > $user['Balance'] && $user['agent'] != "n2" && intval($priceproduct) != 0 && $agent_profit < 0) {
         $marzbandirectpay = select("shopSetting", "*", "Namevalue", "statusdirectpabuy", "select")['value'];
         $Balance_prim = $priceproduct - $user['Balance'];
         if ($Balance_prim <= 1)
@@ -4323,16 +4325,17 @@ $textinvite
     }
     sendMessageService($marzban_list_get, $dataoutput['configs'], $output_config_link, $dataoutput['username'], $Shoppinginfo, $textcreatuser, $randomString);
     sendmessage($from_id, $textbotlang['users']['selectoption'], $keyboard, 'HTML');
-    if (intval($priceproduct) != 0) {
+    if ($user['agent'] == 'n' && $agent_profit >= 0) {
+        // Agent entered a customer price: don't deduct cost, only add profit
+        if ($agent_profit > 0) {
+            $current_balance = intval(select("user", "Balance", "id", $from_id, "select")['Balance']);
+            update("user", "Balance", $current_balance + $agent_profit, "id", $from_id);
+            sendmessage($from_id, "💵 سود فروش <b>" . number_format($agent_profit) . "</b> تومان به کیف پول شما اضافه شد.", null, 'HTML');
+        }
+    } elseif (intval($priceproduct) != 0) {
+        // Normal flow: deduct cost from wallet
         $Balance_prim = $user['Balance'] - $priceproduct;
         update("user", "Balance", $Balance_prim, "id", $from_id);
-    }
-    // Credit agent profit if they entered a customer price higher than their cost
-    $agent_profit = intval($userdate['agent_profit'] ?? 0);
-    if ($user['agent'] == 'n' && $agent_profit > 0) {
-        $current_balance = intval(select("user", "Balance", "id", $from_id, "select")['Balance']);
-        update("user", "Balance", $current_balance + $agent_profit, "id", $from_id);
-        sendmessage($from_id, "💵 سود فروش <b>" . number_format($agent_profit) . "</b> تومان به کیف پول شما اضافه شد.", null, 'HTML');
     }
     if ($marzban_list_get['MethodUsername'] == "متن دلخواه + عدد ترتیبی" || $marzban_list_get['MethodUsername'] == "نام کاربری + عدد به ترتیب" || $marzban_list_get['MethodUsername'] == "آیدی عددی+عدد ترتیبی" || $marzban_list_get['MethodUsername'] == "متن دلخواه نماینده + عدد ترتیبی") {
         $value = intval($user['number_username']) + 1;
