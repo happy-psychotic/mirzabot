@@ -24,7 +24,7 @@ if (!is_array($admin_idsmain)) {
     $admin_idsmain = [];
 }
 
-if (!in_array($from_id, $admin_idsmain)) {
+if (!in_array($from_id, $admin_ids_decoded) && !in_array($from_id, $admin_idsmain)) {
     unset($keyboarddate['text_Admin']);
 }
 
