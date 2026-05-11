@@ -50,6 +50,11 @@ if (in_array($text, $textadmin) || $datain == "admin") {
         sendmessage($from_id, $miniAppInstructionText, $miniAppInstructionKeyboard, 'HTML');
     }
 } elseif ($text == $textbotlang['Admin']['backadmin']) {
+    if (strpos($user['step'], 'changetext') === 0 || strpos($user['step'], 'text_') === 0 || strpos($user['step'], 'textpanel') === 0) {
+        step('home', $from_id);
+        sendmessage($from_id, $textbotlang['users']['selectoption'], $textbot, 'HTML');
+        return;
+    }
     if ($buyreport == "0" || $otherservice == "0" || $otherreport == "0" || $paymentreports == "0" || $reporttest == "0" || $errorreport == "0") {
         sendmessage($from_id, $textbotlang['Admin']['activebottext'], $active_panell, 'HTML');
         return;
@@ -71,6 +76,11 @@ if (in_array($text, $textadmin) || $datain == "admin") {
     Editmessagetext($from_id, $message_id, $confirmationText, $confirmationKeyboard, 'HTML');
     return;
 } elseif ($text == $textbotlang['Admin']['backmenu']) {
+    if (strpos($user['step'], 'changetext') === 0 || strpos($user['step'], 'text_') === 0 || strpos($user['step'], 'textpanel') === 0) {
+        step('home', $from_id);
+        sendmessage($from_id, $textbotlang['users']['selectoption'], $textbot, 'HTML');
+        return;
+    }
     if ($buyreport == "0" || $otherservice == "0" || $otherreport == "0" || $paymentreports == "0" || $reporttest == "0" || $errorreport == "0") {
         sendmessage($from_id, $textbotlang['Admin']['activebottext'], $setting_panel, 'HTML');
         return;
