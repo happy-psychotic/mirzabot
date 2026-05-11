@@ -4058,11 +4058,7 @@ $textinvite
     if ($user['agent'] == 'n') {
         $agentCostFormatted = number_format($info_product['price_product']);
         $askText = $textin . "\n\n💰 مبلغ تمام‌شده برای مشتری را وارد کنید (تومان):\n🔔 حداقل <b>{$agentCostFormatted}</b> تومان\n⬅️ برای قیمت عادی عدد <b>0</b> وارد کنید.";
-        if ($user['step'] != "getvolumecustomuser" && !in_array($marzban_list_get['MethodUsername'], ["نام کاربری دلخواه", "نام کاربری دلخواه + عدد رندوم"])) {
-            Editmessagetext($from_id, $message_id, $askText, $backuser);
-        } else {
-            sendmessage($from_id, $askText, $backuser, 'HTML');
-        }
+        sendmessage($from_id, $askText, $backuser, 'HTML');
         step('get_customer_price', $from_id);
     } else {
         if ($user['step'] != "getvolumecustomuser" && !in_array($marzban_list_get['MethodUsername'], ["نام کاربری دلخواه", "نام کاربری دلخواه + عدد رندوم"])) {
