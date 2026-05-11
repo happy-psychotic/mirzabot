@@ -1066,9 +1066,11 @@ if ($text == $text_bot_var['btn_keyboard']['buy'] && $setting['active_step_note'
         if (is_array($errorMessage) || is_object($errorMessage)) {
             $errorMessage = json_encode($errorMessage, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         }
+        update("invoice", "Status", "Unsuccessful", "id_invoice", $randomString);
         sendmessage($from_id, $textbotlang['users']['sell']['ErrorConfig'], $keyboard, 'HTML');
+        sendmessage($from_id, "💳 مبلغی از کیف پول شما کسر نشده است. لطفاً مجدداً تلاش کنید.", $keyboard, 'HTML');
         $texterros = "⭕️ خطای ساخت اشتراک  در ربات نماینده
-✍️ دلیل خطا : 
+✍️ دلیل خطا :
 {$errorMessage}
 آیدی کابر : $from_id
 نام کاربری کاربر : @$username

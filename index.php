@@ -4275,7 +4275,9 @@ $textinvite
             $errorMessage = (string) $errorMessage;
         }
         $dataoutput['msg'] = $errorMessage;
+        update("invoice", "Status", "Unsuccessful", "id_invoice", $randomString);
         sendmessage($from_id, $textbotlang['users']['sell']['ErrorConfig'], $keyboard, 'HTML');
+        sendmessage($from_id, "💳 مبلغی از کیف پول شما کسر نشده است. لطفاً مجدداً تلاش کنید.", $keyboard, 'HTML');
         $texterros = "⭕️ خطای ساخت اشتراک
 ✍️ دلیل خطا :
 {$dataoutput['msg']}
