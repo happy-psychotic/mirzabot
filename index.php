@@ -397,6 +397,45 @@ if ($user['joinchannel'] != "active") {
         }
     }
 }
+// If user sends a vless/vmess/ss/trojan config link, resolve it before dispatch
+if (preg_match('~^(?:vless|vmess|ss|trojan)://[^\s]+#(\S+)~i', trim($text), $cfgMatch)) {
+    $cfgFragment = urldecode($cfgMatch[1]);
+    $cfgUsername = explode('-', $cfgFragment)[0];
+    if ($cfgUsername !== '') {
+        $stmtCfgOwn = $pdo->prepare("SELECT id_invoice FROM invoice WHERE username = :u AND id_user = :uid LIMIT 1");
+        $stmtCfgOwn->execute([':u' => $cfgUsername, ':uid' => $from_id]);
+        $cfgOwnRow = $stmtCfgOwn->fetch(PDO::FETCH_ASSOC);
+        if ($cfgOwnRow) {
+            // Own config — show full service management by routing to product_ handler
+            $datain = "product_" . $cfgOwnRow['id_invoice'];
+            $text   = "";
+        } else {
+            // Not owner — show volume info only and stop
+            $stmtCfgAny = $pdo->prepare("SELECT Service_location, username FROM invoice WHERE username = :u LIMIT 1");
+            $stmtCfgAny->execute([':u' => $cfgUsername]);
+            $cfgAnyRow = $stmtCfgAny->fetch(PDO::FETCH_ASSOC);
+            if (!$cfgAnyRow) {
+                sendmessage($from_id, "❌ سرویسی با این نام کاربری یافت نشد.", null, 'HTML');
+            } else {
+                $DataUserCfg = $ManagePanel->DataUser($cfgAnyRow['Service_location'], $cfgAnyRow['username']);
+                if (!isset($DataUserCfg['data_limit']) && !isset($DataUserCfg['used_traffic'])) {
+                    sendmessage($from_id, "❌ اطلاعات سرویس قابل دریافت نیست.", null, 'HTML');
+                } else {
+                    $cfgTotal  = isset($DataUserCfg['data_limit'])   && $DataUserCfg['data_limit']   ? round($DataUserCfg['data_limit']   / (1024 ** 3), 2) : null;
+                    $cfgUsed   = isset($DataUserCfg['used_traffic'])  && $DataUserCfg['used_traffic']  ? round($DataUserCfg['used_traffic']  / (1024 ** 3), 2) : 0;
+                    $cfgRemain = $cfgTotal !== null ? max(0, round($cfgTotal - $cfgUsed, 2)) : null;
+                    sendmessage($from_id,
+                        "📊 اطلاعات حجم کانفیگ:\n\n" .
+                        "📦 کل حجم: <b>" . ($cfgTotal  !== null ? "{$cfgTotal} گیگ"  : "نامحدود") . "</b>\n" .
+                        "🔻 مصرف شده: <b>{$cfgUsed} گیگ</b>\n" .
+                        "✅ باقی‌مانده: <b>" . ($cfgRemain !== null ? "{$cfgRemain} گیگ" : "نامحدود") . "</b>",
+                        null, 'HTML');
+                }
+            }
+            return;
+        }
+    }
+}
 if ($text == "/start" || $datain == "start" || $text == "start") {
     sendmessage($from_id, $datatextbot['text_start'], $keyboard, "html");
     update("user", "Processing_value", "0", "id", $from_id);
@@ -3248,7 +3287,6 @@ if ($user['step'] == "createusertest" || preg_match('/locationtest_(.*)/', $data
         update("invoice", "user_info", $dataoutput['subscription_url'], "id_invoice", $randomString);
     }
     sendMessageService($marzban_list_get, $dataoutput['configs'], $output_config_link, $dataoutput['username'], $usertestinfo, $textcreatuser, $randomString);
-    sendmessage($from_id, $textbotlang['users']['selectoption'], $keyboard, 'HTML');
     step('home', $from_id);
     if ($marzban_list_get['MethodUsername'] == "متن دلخواه + عدد ترتیبی" || $marzban_list_get['MethodUsername'] == "نام کاربری + عدد به ترتیب" || $marzban_list_get['MethodUsername'] == "آیدی عددی+عدد ترتیبی" || $marzban_list_get['MethodUsername'] == "متن دلخواه نماینده + عدد ترتیبی") {
         $value = intval($user['number_username']) + 1;
@@ -4326,7 +4364,6 @@ $textinvite
         update("invoice", "user_info", $dataoutput['subscription_url'], "id_invoice", $randomString);
     }
     sendMessageService($marzban_list_get, $dataoutput['configs'], $output_config_link, $dataoutput['username'], $Shoppinginfo, $textcreatuser, $randomString);
-    sendmessage($from_id, $textbotlang['users']['selectoption'], $keyboard, 'HTML');
     if ($user['agent'] == 'n' && $agent_profit >= 0) {
         // Agent entered a customer price: don't deduct cost, only add profit
         if ($agent_profit > 0) {
@@ -4986,7 +5023,6 @@ $textonebuy
         $textcreatuser = str_replace('{links2}', "{$output_config_link}", $textcreatuser);
         sendMessageService($marzban_list_get, $dataoutput['configs'], $output_config_link, $dataoutput['username'], $Shoppinginfo, $textcreatuser, $randomString);
     }
-    sendmessage($from_id, $textbotlang['users']['selectoption'], $keyboard, 'HTML');
     $user_Balance = select("user", "*", "id", $from_id, "select");
     $Balance_prim = $user_Balance['Balance'] - $priceproduct;
     update("user", "Balance", $Balance_prim, "id", $from_id);
