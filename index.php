@@ -4472,7 +4472,61 @@ $textonebuy
         ]);
     }
     update("user", "Processing_value_four", "none", "id", $from_id);
+    // If agent used the profit flow, ask them to send a receipt photo
+    if ($user['agent'] == 'n' && $agent_profit >= 0) {
+        $receiptData = json_encode([
+            'invoice_id'    => $randomString,
+            'username_ac'   => $username_ac,
+            'name_product'  => $info_product['name_product'],
+            'volume'        => $info_product['Volume_constraint'],
+            'days'          => $info_product['Service_time'],
+            'agent_cost'    => $priceproduct,
+            'profit'        => $agent_profit,
+            'customer_price' => $priceproduct + $agent_profit,
+        ]);
+        update("user", "Processing_value", $receiptData, "id", $from_id);
+        sendmessage($from_id, "🖼 تصویر رسید پرداخت مشتری را ارسال کنید:", $backuser, 'HTML');
+        step('agent_profit_receipt', $from_id);
+    } else {
+        step('home', $from_id);
+    }
+} elseif ($user['step'] == 'agent_profit_receipt') {
     step('home', $from_id);
+    if (!$photo) {
+        sendmessage($from_id, "❌ لطفاً یک تصویر ارسال کنید.", $backuser, 'HTML');
+        return;
+    }
+    $rd = json_decode($user['Processing_value'], true);
+    $timejalali = jdate('Y/m/d H:i:s');
+    $caption = "🧾 <b>رسید فروش نماینده</b>
+
+👤 نماینده: <a href=\"tg://user?id={$from_id}\">{$from_id}</a> @{$username}
+🔑 نام سرویس: <code>{$rd['username_ac']}</code>
+📦 محصول: {$rd['name_product']}
+🔋 حجم: {$rd['volume']} GB — ⌛️ زمان: {$rd['days']} روز
+💰 قیمت مشتری: <b>" . number_format($rd['customer_price']) . "</b> تومان
+💵 سود نماینده: <b>" . number_format($rd['profit']) . "</b> تومان
+🕐 زمان: {$timejalali}";
+    sendmessage($from_id, "✅ رسید ثبت شد.", $keyboard, 'HTML');
+    foreach ($admin_ids as $id_admin) {
+        $adminrulecheck = select("admin", "*", "id_admin", $id_admin, "select");
+        if ($adminrulecheck['rule'] == "support") continue;
+        telegram('sendphoto', [
+            'chat_id'    => $id_admin,
+            'photo'      => $photoid,
+            'caption'    => $caption,
+            'parse_mode' => "HTML",
+        ]);
+    }
+    if (strlen($setting['Channel_Report']) > 0) {
+        telegram('sendphoto', [
+            'chat_id'            => $setting['Channel_Report'],
+            'message_thread_id'  => $buyreport,
+            'photo'              => $photoid,
+            'caption'            => $caption,
+            'parse_mode'         => "HTML",
+        ]);
+    }
 } elseif ($datain == "aptdc") {
     sendmessage($from_id, $textbotlang['users']['Discount']['getcodesell'], $backuser, 'HTML');
     step('getcodesellDiscount', $from_id);
