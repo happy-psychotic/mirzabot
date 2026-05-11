@@ -28,6 +28,7 @@ acquire_lock
 
 # Only deploy committed code — uncommitted changes are never sent to server
 git -C "$REPO_ROOT" archive "$REF" | tar -x -C "$TMP_DIR"
+chmod 755 "$TMP_DIR"
 
 RSYNC_EXCLUDES=(
   --exclude '.git/'
@@ -51,7 +52,7 @@ RSYNC_EXCLUDES=(
   --exclude 'PROJECT_UPDATE.md'
 )
 
-RSYNC_ARGS=(-az --delete --itemize-changes "${RSYNC_EXCLUDES[@]}")
+RSYNC_ARGS=(-az --delete --itemize-changes --chmod=D755,F644 "${RSYNC_EXCLUDES[@]}")
 if [[ "$DRY_RUN" == "1" ]]; then
   RSYNC_ARGS+=(--dry-run)
 fi
