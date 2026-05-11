@@ -480,24 +480,21 @@ if ($text == "📞 تنظیم نام کاربری پشتیبانی") {
 
 📅 فعال تا تاریخ : $expirationDate ($day)
 
-لینک اشتراک کاربر :
-<code>{$DataUserOut['subscription_url']}</code>
-
 📶 اخرین زمان اتصال  : $lastonline
 🔄 اخرین زمان آپدیت لینک اشتراک  : $lastupdate
 #️⃣ کلاینت متصل شده :<code>{$DataUserOut['sub_last_user_agent']}</code>";
         $namestatus = $DataUserOut['status'] == "active" ? '❌ خاموش کردن اکانت' : '💡 روشن کردن اکانت';
         $keyboardlists['inline_keyboard'][] = [
             ['text' => $textbotlang['users']['extend']['title'], 'callback_data' => 'extendadmin_' . $OrderUser['id_invoice']],
-            ['text' => $textbotlang['users']['stateus']['config'], 'callback_data' => 'config_' . $OrderUser['id_invoice']],
-        ];
-        $keyboardlists['inline_keyboard'][] = [
-            ['text' => '🔗 لینک اشتراک', 'callback_data' => 'subscriptionurl_' . $OrderUser['id_invoice']],
-            ['text' => '✏️ تغییر نام سرویس', 'callback_data' => 'renameservice_' . $OrderUser['id_invoice']],
-        ];
-        $keyboardlists['inline_keyboard'][] = [
-            ['text' => '🔄 تغییر لینک', 'callback_data' => 'changelink_' . $OrderUser['id_invoice']],
             ['text' => $namestatus, 'callback_data' => 'changestatusreselleradmin_' . $OrderUser['id_invoice']],
+        ];
+        $keyboardlists['inline_keyboard'][] = [
+            ['text' => '📲 دریافت کانفیگ', 'callback_data' => 'adminconfig_' . $OrderUser['id_invoice']],
+            ['text' => '🔗 لینک اشتراک', 'callback_data' => 'subscriptionurl_' . $OrderUser['id_invoice']],
+        ];
+        $keyboardlists['inline_keyboard'][] = [
+            ['text' => '✏️ تغییر نام سرویس', 'callback_data' => 'renameservice_' . $OrderUser['id_invoice']],
+            ['text' => '🔄 تغییر لینک', 'callback_data' => 'changelink_' . $OrderUser['id_invoice']],
         ];
         sendmessage($from_id, $text_order, json_encode($keyboardlists), 'HTML');
     }

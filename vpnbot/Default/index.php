@@ -1620,6 +1620,37 @@ $textonebuy
         ]);
         unlink($urlimage);
     }
+} elseif (preg_match('/adminconfig_(\w+)/', $datain, $dataget)) {
+    $id_invoice = $dataget[1];
+    $nameloc = select("invoice", "*", "id_invoice", $id_invoice, "select");
+    $isAdmin = in_array($from_id, $admin_ids_decoded) || in_array($from_id, $admin_idsmain);
+    if (!$nameloc || !$isAdmin) return;
+    $DataUserOut = $ManagePanel->DataUser($nameloc['Service_location'], $nameloc['username']);
+    if ($DataUserOut['status'] == "Unsuccessful") {
+        sendmessage($from_id, $textbotlang['users']['stateus']['error'], null, 'html');
+        return;
+    }
+    if (!is_array($DataUserOut['links'])) {
+        sendmessage($from_id, "❌ خطا در خواندن اطلاعات کانفیگ با پشتیبانی در ارتباط باشید.", null, 'html');
+        return;
+    }
+    deletemessage($from_id, $message_id);
+    $backKb = json_encode(['inline_keyboard' => [[['text' => $textbotlang['users']['stateus']['backinfo'], 'callback_data' => "manageinvoicereseller_{$nameloc['id_invoice']}"]]]]);
+    foreach ($DataUserOut['links'] as $i => $link) {
+        $urlimage = runtimeTempPath("config_qr_{$from_id}_{$i}", '.png');
+        $qrCode = createqrcode($link);
+        file_put_contents($urlimage, $qrCode->getString());
+        addBackgroundImage($urlimage, $qrCode, $Pathfiles . 'images.jpg');
+        $isLast = ($i === array_key_last($DataUserOut['links']));
+        telegram('sendphoto', [
+            'chat_id'      => $from_id,
+            'photo'        => new CURLFile($urlimage),
+            'caption'      => formatConfigLinksForDelivery([$link]),
+            'parse_mode'   => "HTML",
+            'reply_markup' => $isLast ? $backKb : null,
+        ]);
+        unlink($urlimage);
+    }
 } elseif (preg_match('/configget_(.*)_(.*)/', $datain, $dataget)) {
     $id_invoice = $dataget[1];
     $nameloc = select("invoice", "*", "id_invoice", $id_invoice, "select");

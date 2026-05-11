@@ -1866,6 +1866,101 @@ $output
             'parse_mode' => "HTML"
         ], $APIKEY);
     }
+} elseif (preg_match('/adminconfig_(\w+)/', $datain, $dataget)) {
+    $id_invoice = $dataget[1];
+    $nameloc = select("invoice", "*", "id_invoice", $id_invoice, "select");
+    $isAdmin = in_array($from_id, $admin_ids) || in_array($from_id, $admin_idsmain);
+    if (!$nameloc || !$isAdmin) return;
+    $DataUserOut = $ManagePanel->DataUser($nameloc['Service_location'], $nameloc['username']);
+    if ($DataUserOut['status'] == "Unsuccessful") {
+        sendmessage($from_id, $textbotlang['users']['stateus']['error'], null, 'html');
+        return;
+    }
+    if (!is_array($DataUserOut['links'])) {
+        sendmessage($from_id, "❌ خطا در خواندن اطلاعات کانفیگ با پشتیبانی در ارتباط باشید.", null, 'html');
+        return;
+    }
+    deletemessage($from_id, $message_id);
+    $backKb = json_encode(['inline_keyboard' => [[['text' => $textbotlang['users']['stateus']['backinfo'], 'callback_data' => "manageinvoicereseller_{$nameloc['id_invoice']}"]]]]);
+    foreach ($DataUserOut['links'] as $i => $link) {
+        $urlimage = runtimeTempPath("config_qr_{$from_id}_{$i}", '.png');
+        $qrCode = createqrcode($link);
+        file_put_contents($urlimage, $qrCode->getString());
+        addBackgroundImage($urlimage, $qrCode, $Pathfiles . 'images.jpg');
+        $isLast = ($i === array_key_last($DataUserOut['links']));
+        telegram('sendphoto', [
+            'chat_id'      => $from_id,
+            'photo'        => new CURLFile($urlimage),
+            'caption'      => formatConfigLinksForDelivery([$link]),
+            'parse_mode'   => "HTML",
+            'reply_markup' => $isLast ? $backKb : null,
+        ]);
+        unlink($urlimage);
+    }
+} elseif (preg_match('/subscriptionurl_(\w+)/', $datain, $dataget)) {
+    $id_invoice = $dataget[1];
+    $nameloc = select("invoice", "*", "id_invoice", $id_invoice, "select");
+    $isAdmin = in_array($from_id, $admin_ids) || in_array($from_id, $admin_idsmain);
+    if (!$nameloc || ($nameloc['id_user'] != $from_id && !$isAdmin)) return;
+    $DataUserOut = $ManagePanel->DataUser($nameloc['Service_location'], $nameloc['username']);
+    if ($DataUserOut['status'] == "Unsuccessful") {
+        sendmessage($from_id, $textbotlang['users']['stateus']['error'], null, 'html');
+        return;
+    }
+    $marzban_list_get = select("marzban_panel", "*", "name_panel", $nameloc['Service_location'], "select");
+    $subscriptionurl = $DataUserOut['subscription_url'];
+    $backCallback = $isAdmin && $nameloc['id_user'] != $from_id ? "manageinvoicereseller_" . $nameloc['id_invoice'] : "product_" . $nameloc['id_invoice'];
+    $bakinfos = json_encode(['inline_keyboard' => [[['text' => $textbotlang['users']['stateus']['backinfo'], 'callback_data' => $backCallback]]]]);
+    if ($marzban_list_get['type'] == "WGDashboard") {
+        $urlimage = "{$marzban_list_get['inboundid']}_{$nameloc['username']}.conf";
+        file_put_contents($urlimage, $subscriptionurl);
+        telegram('senddocument', ['chat_id' => $from_id, 'document' => new CURLFile($urlimage), 'reply_markup' => $bakinfos, 'caption' => "فایل اشتراک شما", 'parse_mode' => "HTML"]);
+        unlink($urlimage);
+    } else {
+        $textsub = "{$textbotlang['users']['stateus']['linksub']}\n\n<code>$subscriptionurl</code>";
+        $urlimage = runtimeTempPath("sub_qr_{$from_id}", '.png');
+        $qrCode = createqrcode($subscriptionurl);
+        file_put_contents($urlimage, $qrCode->getString());
+        addBackgroundImage($urlimage, $qrCode, $Pathfiles . 'images.jpg');
+        telegram('sendphoto', ['chat_id' => $from_id, 'photo' => new CURLFile($urlimage), 'reply_markup' => $bakinfos, 'caption' => $textsub, 'parse_mode' => "HTML"]);
+        unlink($urlimage);
+    }
+} elseif (preg_match('/renameservice_(\w+)/', $datain, $dataget)) {
+    $id_invoice = $dataget[1];
+    $invoice = select("invoice", "*", "id_invoice", $id_invoice, "select");
+    $isAdmin = in_array($from_id, $admin_ids) || in_array($from_id, $admin_idsmain);
+    if (!$invoice || ($invoice['id_user'] != $from_id && !$isAdmin)) {
+        sendmessage($from_id, "❌ سرویس یافت نشد.", null, 'html');
+        return;
+    }
+    $backCallback = $isAdmin && $invoice['id_user'] != $from_id ? "manageinvoicereseller_" . $id_invoice : "product_" . $id_invoice;
+    update("user", "Processing_value", $id_invoice, "id", $from_id);
+    $backinfoss = json_encode(['inline_keyboard' => [[['text' => $textbotlang['users']['stateus']['backinfo'], 'callback_data' => $backCallback]]]]);
+    $noteRawRename = $invoice['note'] ?? '';
+    if (preg_match('/__name:(.+)/', $noteRawRename, $nm)) { $currentDisplay = $nm[1]; } else { $currentDisplay = $invoice['username']; }
+    Editmessagetext($from_id, $message_id, "✏️ نام فعلی سرویس: <code>$currentDisplay</code>\n\nنام جدید را وارد کنید:", $backinfoss);
+    step("getrenameservice", $from_id);
+} elseif ($user['step'] == "getrenameservice") {
+    $id_invoice = $user['Processing_value'];
+    $invoice = select("invoice", "*", "id_invoice", $id_invoice, "select");
+    $isAdmin = in_array($from_id, $admin_ids) || in_array($from_id, $admin_idsmain);
+    if (!$invoice || ($invoice['id_user'] != $from_id && !$isAdmin)) {
+        sendmessage($from_id, "❌ سرویس یافت نشد.", $keyboard, 'html');
+        step("home", $from_id);
+        return;
+    }
+    $backCallback = $isAdmin && $invoice['id_user'] != $from_id ? "manageinvoicereseller_" . $id_invoice : "product_" . $id_invoice;
+    $backinfoss = json_encode(['inline_keyboard' => [[['text' => $textbotlang['users']['stateus']['backinfo'], 'callback_data' => $backCallback]]]]);
+    if (mb_strlen($text) < 1 || mb_strlen($text) > 32) {
+        sendmessage($from_id, "❌ نام نامعتبر است. بین ۱ تا ۳۲ کاراکتر وارد کنید.", $backinfoss, 'html');
+        return;
+    }
+    $existingMeta = select("invoice", "note", "id_invoice", $id_invoice, "select")['note'] ?? '';
+    preg_match('/__m:(\d+)/', $existingMeta, $metaMatch);
+    $metaPrefix = isset($metaMatch[0]) ? $metaMatch[0] . '|' : '';
+    update("invoice", "note", $metaPrefix . '__name:' . $text, "id_invoice", $id_invoice);
+    step("home", $from_id);
+    sendmessage($from_id, "✅ نام سرویس به <code>$text</code> تغییر یافت.", $backinfoss, 'html');
 } elseif (preg_match('/changelink_(\w+)/', $datain, $dataget)) {
     $id_invoice = $dataget[1];
     $nameloc = select("invoice", "*", "id_invoice", $id_invoice, "select");
