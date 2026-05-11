@@ -2212,6 +2212,39 @@ function isBase64($string)
     }
     return false;
 }
+// Returns [gigPrice, dayPrice] for an agent user.
+// If the agent has a reseller bot with minpricevolume/minpricetime set, those override pricecustomvolume/pricecustomtime.
+function agentPricePerUnit(string $agent_user_id, string $agent_type, array $panel): array
+{
+    global $pdo;
+    $gigPrice = intval(json_decode($panel['pricecustomvolume'] ?? '{}', true)[$agent_type] ?? 0);
+    $dayPrice = intval(json_decode($panel['pricecustomtime']   ?? '{}', true)[$agent_type] ?? 0);
+    $botsaz = $pdo->prepare("SELECT setting FROM botsaz WHERE id_user = :uid LIMIT 1");
+    $botsaz->execute([':uid' => $agent_user_id]);
+    $row = $botsaz->fetch(PDO::FETCH_ASSOC);
+    if ($row) {
+        $s = json_decode($row['setting'], true);
+        if (!empty($s['minpricevolume']) && intval($s['minpricevolume']) > 0)
+            $gigPrice = intval($s['minpricevolume']);
+        if (!empty($s['minpricetime']) && intval($s['minpricetime']) > 0)
+            $dayPrice = intval($s['minpricetime']);
+    }
+    return [$gigPrice, $dayPrice];
+}
+
+// Recalculates a product's price for an agent using agentPricePerUnit if applicable.
+// Returns the overridden price, or the original product price if no override.
+function agentProductPrice(string $agent_user_id, string $agent_type, array $panel, array $product): int
+{
+    [$gigPrice, $dayPrice] = agentPricePerUnit($agent_user_id, $agent_type, $panel);
+    $vol  = intval($product['Volume_constraint'] ?? 0);
+    $days = intval($product['Service_time'] ?? 0);
+    if ($gigPrice > 0 || $dayPrice > 0) {
+        return ($vol * $gigPrice) + ($days * $dayPrice);
+    }
+    return intval($product['price_product']);
+}
+
 function formatTelegramCode($value)
 {
     return "<code>" . htmlspecialchars((string)$value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</code>";

@@ -1498,6 +1498,8 @@ function KeyboardProduct($location,$query,$pricediscount,$datakeyboard,$statuscu
     }else{
             $valuetow = "";
         }
+    $kp_user = select("user", "*", "id", $from_id, "select");
+    $kp_panel = select("marzban_panel", "*", "name_panel", $location, "select");
     while ($result = $stmt->fetch(PDO::FETCH_ASSOC)) {
         $hide_panel = json_decode($result['hide_panel'],true);
         if(in_array($location,$hide_panel))continue;
@@ -1505,6 +1507,10 @@ function KeyboardProduct($location,$query,$pricediscount,$datakeyboard,$statuscu
         $stmts2->execute();
         $countorder = $stmts2->rowCount();
         if($result['one_buy_status'] == "1" && $countorder != 0 )continue;
+        // Override price with agent's per-unit cost if minpricevolume/minpricetime is set
+        if ($kp_panel && $kp_user && in_array($kp_user['agent'], ['n', 'n2'])) {
+            $result['price_product'] = agentProductPrice($from_id, $kp_user['agent'], $kp_panel, $result);
+        }
         if(intval($pricediscount) != 0){
             $resultper = ($result['price_product'] * $pricediscount) / 100;
             $result['price_product'] = $result['price_product'] -$resultper;

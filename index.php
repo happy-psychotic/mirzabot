@@ -1795,8 +1795,7 @@ $textconnect
             $parentUser = select("user", "*", "id", $user['affiliates'], "select");
             if ($parentUser && in_array($parentUser['agent'], ['n', 'n2'])) {
                 $agentPanel = select("marzban_panel", "*", "name_panel", $nameloc['Service_location'], "select");
-                $agentGigPrice = intval(json_decode($agentPanel['pricecustomvolume'] ?? '{}', true)[$parentUser['agent']] ?? 0);
-                $agentDayPrice = intval(json_decode($agentPanel['pricecustomtime']   ?? '{}', true)[$parentUser['agent']] ?? 0);
+                [$agentGigPrice, $agentDayPrice] = agentPricePerUnit($parentUser['id'], $parentUser['agent'], $agentPanel);
                 $agentCost = (intval($nameloc['Volume']) * $agentGigPrice) + (intval($nameloc['Service_time']) * $agentDayPrice);
                 if ($agentCost > 0 && $discountedExtend < $agentCost) {
                     $discountedExtend = $agentCost;
@@ -3892,8 +3891,7 @@ $textinvite
 } elseif ($datain == "customsellvolume") {
     $userdate = json_decode($user['Processing_value'], true);
     $marzban_list_get = select("marzban_panel", "*", "name_panel", $userdate['name_panel'], "select");
-    $eextraprice = json_decode($marzban_list_get['pricecustomvolume'], true);
-    $custompricevalue = $eextraprice[$user['agent']];
+    [$custompricevalue, $customtimevalueprice_disp] = agentPricePerUnit($from_id, $user['agent'], $marzban_list_get);
     $mainvolume = json_decode($marzban_list_get['mainvolume'], true);
     $mainvolume = $mainvolume[$user['agent']];
     $maxvolume = json_decode($marzban_list_get['maxvolume'], true);
@@ -3925,10 +3923,9 @@ $textinvite
         return;
     }
     $marzban_list_get = select("marzban_panel", "*", "name_panel", $userdate['name_panel'], "select");
-    $eextraprice = json_decode($marzban_list_get['pricecustomtime'], true);
-    $customtimevalueprice = $eextraprice[$user['agent']];
+    [, $customtimevalueprice] = agentPricePerUnit($from_id, $user['agent'], $marzban_list_get);
     update("user", "Processing_value_one", $text, "id", $from_id);
-    $textcustom = "⌛️ زمان سرویس خود را انتخاب نمایید 
+    $textcustom = "⌛️ زمان سرویس خود را انتخاب نمایید
 📌 تعرفه هر روز  : $customtimevalueprice  تومان
 ⚠️ حداقل زمان $maintime روز  و حداکثر $maxtime روز  می توانید تهیه کنید";
     sendmessage($from_id, $textcustom, $backuser, 'html');
@@ -4003,10 +4000,7 @@ $textinvite
         $loc = $prodcut;
     }
     update("user", "Processing_value_one", $loc, "id", $from_id);
-    $eextraprice = json_decode($marzban_list_get['pricecustomvolume'], true);
-    $custompricevalue = $eextraprice[$user['agent']];
-    $eextraprice = json_decode($marzban_list_get['pricecustomtime'], true);
-    $customtimevalueprice = $eextraprice[$user['agent']];
+    [$custompricevalue, $customtimevalueprice] = agentPricePerUnit($from_id, $user['agent'], $marzban_list_get);
     $parts = explode("_", $loc);
     if ($parts[0] == "customvolume") {
         $info_product['Volume_constraint'] = $parts[2];
@@ -4016,6 +4010,11 @@ $textinvite
         $info_product['price_product'] = ($parts[2] * $custompricevalue) + ($parts[1] * $customtimevalueprice);
     } else {
         $info_product = mysqli_fetch_assoc(mysqli_query($connect, "SELECT * FROM product WHERE code_product = '$loc' AND (Location = '{$userdate['name_panel']}'or Location = '/all') LIMIT 1"));
+        // Override price with agent's per-unit cost if minpricevolume/minpricetime is set
+        if ($info_product && in_array($user['agent'], ['n', 'n2'])) {
+            $overridePrice = agentProductPrice($from_id, $user['agent'], $marzban_list_get, $info_product);
+            $info_product['price_product'] = $overridePrice;
+        }
     }
     if (!isset($info_product['price_product'])) {
         sendmessage($from_id, "❌ خطایی در تایید  انجام شده است لطفا مراحل پرداخت را مجددا انجام دهید", $keyboard, 'HTML');
@@ -4055,7 +4054,7 @@ $textinvite
     if (intval($info_product['Volume_constraint']) == 0) {
         $textin = str_replace('گیگ', "", $textin);
     }
-    if ($user['agent'] == 'n' && $parts[0] == 'customvolume') {
+    if ($user['agent'] == 'n') {
         $agentCostFormatted = number_format($info_product['price_product']);
         $askText = $textin . "\n\n💰 مبلغ تمام‌شده برای مشتری را وارد کنید (تومان):\n🔔 حداقل <b>{$agentCostFormatted}</b> تومان\n⬅️ برای قیمت عادی عدد <b>0</b> وارد کنید.";
         if ($user['step'] != "getvolumecustomuser" && !in_array($marzban_list_get['MethodUsername'], ["نام کاربری دلخواه", "نام کاربری دلخواه + عدد رندوم"])) {
@@ -4079,10 +4078,16 @@ $textinvite
     }
     $userdate = json_decode($user['Processing_value'], true);
     $parts    = explode("_", $user['Processing_value_one']);
-    $marzban_list_get     = select("marzban_panel", "*", "name_panel", $userdate['name_panel'], "select");
-    $custompricevalue     = intval(json_decode($marzban_list_get['pricecustomvolume'], true)[$user['agent']] ?? 0);
-    $customtimevalueprice = intval(json_decode($marzban_list_get['pricecustomtime'],   true)[$user['agent']] ?? 0);
-    $agentCost     = ($parts[2] * $custompricevalue) + ($parts[1] * $customtimevalueprice);
+    $marzban_list_get = select("marzban_panel", "*", "name_panel", $userdate['name_panel'], "select");
+    [$custompricevalue, $customtimevalueprice] = agentPricePerUnit($from_id, $user['agent'], $marzban_list_get);
+    if ($parts[0] == 'customvolume') {
+        $agentCost = (intval($parts[2]) * $custompricevalue) + (intval($parts[1]) * $customtimevalueprice);
+    } else {
+        $stmt = $pdo->prepare("SELECT * FROM product WHERE code_product = :c AND (Location = :l OR Location = '/all') LIMIT 1");
+        $stmt->execute([':c' => $user['Processing_value_one'], ':l' => $userdate['name_panel']]);
+        $prod = $stmt->fetch(PDO::FETCH_ASSOC);
+        $agentCost = $prod ? agentProductPrice($from_id, $user['agent'], $marzban_list_get, $prod) : 0;
+    }
     $customerPrice = intval($text);
     if ($customerPrice !== 0 && $customerPrice < $agentCost) {
         sendmessage($from_id, "❌ مبلغ وارد شده (" . number_format($customerPrice) . " تومان) کمتر از قیمت پایه شما (" . number_format($agentCost) . " تومان) است.", $backuser, 'HTML');
@@ -4107,10 +4112,7 @@ $textinvite
         step("home", $from_id);
         return;
     }
-    $eextraprice = json_decode($marzban_list_get['pricecustomvolume'], true);
-    $custompricevalue = $eextraprice[$user['agent']];
-    $eextraprice = json_decode($marzban_list_get['pricecustomtime'], true);
-    $customtimevalueprice = $eextraprice[$user['agent']];
+    [$custompricevalue, $customtimevalueprice] = agentPricePerUnit($from_id, $user['agent'], $marzban_list_get);
     if ($parts[0] == "customvolume") {
         $info_product['Volume_constraint'] = $parts[2];
         $info_product['name_product'] = $textbotlang['users']['customsellvolume']['title'];
@@ -4125,6 +4127,9 @@ $textinvite
             ':location' => $userdate['name_panel']
         ]);
         $info_product = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($info_product && in_array($user['agent'], ['n', 'n2'])) {
+            $info_product['price_product'] = agentProductPrice($from_id, $user['agent'], $marzban_list_get, $info_product);
+        }
     }
     if (!isset($info_product['price_product']))
         return;
@@ -4169,9 +4174,7 @@ $textinvite
         if (intval($user['affiliates']) != 0) {
             $parentUser = select("user", "*", "id", $user['affiliates'], "select");
             if ($parentUser && in_array($parentUser['agent'], ['n', 'n2'])) {
-                $agentPanel = select("marzban_panel", "*", "name_panel", $marzban_list_get['name_panel'], "select");
-                $agentGigPrice = intval(json_decode($agentPanel['pricecustomvolume'] ?? '{}', true)[$parentUser['agent']] ?? 0);
-                $agentDayPrice = intval(json_decode($agentPanel['pricecustomtime']   ?? '{}', true)[$parentUser['agent']] ?? 0);
+                [$agentGigPrice, $agentDayPrice] = agentPricePerUnit($parentUser['id'], $parentUser['agent'], $marzban_list_get);
                 $agentCost = ($info_product['Volume_constraint'] * $agentGigPrice) + ($info_product['Service_time'] * $agentDayPrice);
                 if ($agentCost > 0 && $discountedPrice < $agentCost) {
                     $discountedPrice = $agentCost;
