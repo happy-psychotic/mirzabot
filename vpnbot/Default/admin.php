@@ -398,12 +398,6 @@ if ($text == "📞 تنظیم نام کاربری پشتیبانی") {
         $keyboardlists['inline_keyboard'][] = [
             ['text' => "♻️ بروزرسانی", 'callback_data' => "manageinvoicereseller_" . $OrderUser['id_invoice']],
         ];
-        $keyboardlists['inline_keyboard'][] = [
-            ['text' => $textbotlang['Admin']['ManageUser']['removeservice'], 'callback_data' => "removeservicereseller-" . $OrderUser['id_invoice']],
-        ];
-        $keyboardlists['inline_keyboard'][] = [
-            ['text' => $textbotlang['Admin']['ManageUser']['removeserviceandback'], 'callback_data' => "removeserviceresellerandback-" . $OrderUser['id_invoice']],
-        ];
         if (isset($OrderUser['time_sell'])) {
             $datatime = jdate('Y/m/d H:i:s', $OrderUser['time_sell']);
         } else {

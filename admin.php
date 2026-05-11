@@ -6257,10 +6257,6 @@ n2", $backadmin, 'HTML');
         ['text' => $namestatus,                                  'callback_data' => "changestatusadmin_{$inv_id}"],
     ];
     $keyboardlists['inline_keyboard'][] = [
-        ['text' => $textbotlang['Admin']['ManageUser']['removeservice'],        'callback_data' => "removeservice-{$inv_id}"],
-        ['text' => $textbotlang['Admin']['ManageUser']['removeserviceandback'], 'callback_data' => "removeserviceandback-{$inv_id}"],
-    ];
-    $keyboardlists['inline_keyboard'][] = [
         ['text' => "🗑 حذف کامل سرویس", 'callback_data' => "removefull-{$inv_id}"],
     ];
     $keyboard_json = json_encode($keyboardlists);

@@ -1405,8 +1405,7 @@ $textconnect
         sendmessage($from_id, "❌ هنوز به سرویس متصل نشده اید برای تمدید سرویس ابتدا به سرویس متصل شوید سپس اقدام به تمدید کنید", null, 'html');
         return;
     }
-    $eextraprice = json_decode($marzban_list_get['pricecustomvolume'], true);
-    $custompricevalue = $eextraprice[$user['agent']];
+    [$custompricevalue] = agentPricePerUnit($from_id, $user['agent'], $marzban_list_get);
     $mainvolume = json_decode($marzban_list_get['mainvolume'], true);
     $mainvolume = $mainvolume[$user['agent']];
     $maxvolume = json_decode($marzban_list_get['maxvolume'], true);
@@ -1496,10 +1495,9 @@ $textconnect
         sendmessage($from_id, $texttime, $backuser, 'HTML');
         return;
     }
-    $eextraprice = json_decode($marzban_list_get['pricecustomtime'], true);
-    $customtimevalueprice = $eextraprice[$user['agent']];
+    [, $customtimevalueprice] = agentPricePerUnit($from_id, $user['agent'], $marzban_list_get);
     savedata("save", "volume", $text);
-    $textcustom = "⌛️ زمان سرویس خود را انتخاب نمایید 
+    $textcustom = "⌛️ زمان سرویس خود را انتخاب نمایید
 📌 تعرفه هر روز  : $customtimevalueprice  تومان
 ⚠️ حداقل زمان $maintime روز  و حداکثر $maxtime روز  می توانید تهیه کنید";
     sendmessage($from_id, $textcustom, $backuser, 'html');
@@ -1518,6 +1516,9 @@ $textconnect
     $marzban_list_get = select("marzban_panel", "*", "name_panel", $nameloc['Service_location'], "select");
     $statusshowprice = select("shopSetting", "*", "Namevalue", "statusshowprice", "select")['value'];
     while ($result = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        if (in_array($user['agent'], ['n', 'n2'])) {
+            $result['price_product'] = agentProductPrice($from_id, $user['agent'], $marzban_list_get, $result);
+        }
         if (intval($user['pricediscount']) != 0) {
             $resultper = ($result['price_product'] * $user['pricediscount']) / 100;
             $result['price_product'] = $result['price_product'] - $resultper;
@@ -1586,10 +1587,7 @@ $textconnect
     } else {
         $codeproduct = $dataget[1];
     }
-    $eextraprice = json_decode($marzban_list_get['pricecustomvolume'], true);
-    $custompricevalue = $eextraprice[$user['agent']];
-    $eextraprice = json_decode($marzban_list_get['pricecustomtime'], true);
-    $customtimevalueprice = $eextraprice[$user['agent']];
+    [$custompricevalue, $customtimevalueprice] = agentPricePerUnit($from_id, $user['agent'], $marzban_list_get);
     if ($user['step'] == "getvolumecustomuserforextend") {
         $product['name_product'] = $nameloc['name_product'];
         $product['code_product'] = "customvolume";
@@ -1606,6 +1604,9 @@ $textconnect
             ':code_product' => $codeproduct,
         ]);
         $product = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($product && in_array($user['agent'], ['n', 'n2'])) {
+            $product['price_product'] = agentProductPrice($from_id, $user['agent'], $marzban_list_get, $product);
+        }
     }
     if ($product == false) {
         sendmessage($from_id, "❌ خطایی رخ داده است مراحل تمدید را از اول انجام دهید.", $keyboard, 'HTML');
@@ -1696,10 +1697,7 @@ $textconnect
         }
     }
     sendmessage($from_id, "🤩 کد تخفیف شما درست بود و  {$SellDiscountlimit['price']} درصد تخفیف روی فاکتور شما اعمال شد.", $keyboard, 'HTML');
-    $eextraprice = json_decode($marzban_list_get['pricecustomvolume'], true);
-    $custompricevalue = $eextraprice[$user['agent']];
-    $eextraprice = json_decode($marzban_list_get['pricecustomtime'], true);
-    $customtimevalueprice = $eextraprice[$user['agent']];
+    [$custompricevalue, $customtimevalueprice] = agentPricePerUnit($from_id, $user['agent'], $marzban_list_get);
     if ($nameloc['name_product'] == "🛍 حجم دلخواه" || $nameloc['name_product'] == "⚙️ سرویس دلخواه") {
         $info_product['code_product'] = "pre";
         $info_product['name_product'] = $nameloc['name_product'];
@@ -1712,6 +1710,9 @@ $textconnect
         $stmt->bindParam(':Location', $marzban_list_get['name_panel'], PDO::PARAM_STR);
         $stmt->execute();
         $info_product = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($info_product && in_array($user['agent'], ['n', 'n2'])) {
+            $info_product['price_product'] = agentProductPrice($from_id, $user['agent'], $marzban_list_get, $info_product);
+        }
     }
     $result = ($SellDiscountlimit['price'] / 100) * $info_product['price_product'];
     $info_product['price_product'] = $info_product['price_product'] - $result;
@@ -1756,10 +1757,7 @@ $textconnect
         sendmessage($from_id, "❌ امکان تمدید در این پنل وجود ندارد", null, 'html');
         return;
     }
-    $eextraprice = json_decode($marzban_list_get['pricecustomvolume'], true);
-    $custompricevalue = $eextraprice[$user['agent']];
-    $eextraprice = json_decode($marzban_list_get['pricecustomtime'], true);
-    $customtimevalueprice = $eextraprice[$user['agent']];
+    [$custompricevalue, $customtimevalueprice] = agentPricePerUnit($from_id, $user['agent'], $marzban_list_get);
     $randomString = bin2hex(random_bytes(2));
     if ($nameloc['name_product'] == "🛍 حجم دلخواه" || $nameloc['name_product'] == "⚙️ سرویس دلخواه") {
         $prodcut['code_product'] = "custom_volume";
@@ -1776,6 +1774,9 @@ $textconnect
             ':code_product' => $userdata['code_product'],
         ]);
         $prodcut = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($prodcut && in_array($user['agent'], ['n', 'n2'])) {
+            $prodcut['price_product'] = agentProductPrice($from_id, $user['agent'], $marzban_list_get, $prodcut);
+        }
     }
     $pricelastextend = $prodcut['price_product'];
     if ($prodcut == false || !in_array($nameloc['Status'], ['active', 'end_of_time', 'end_of_volume', 'sendedwarn', 'send_on_hold'])) {
