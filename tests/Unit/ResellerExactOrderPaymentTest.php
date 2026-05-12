@@ -44,6 +44,10 @@ foreach ($funcFiles as $file) {
         strpos($source, 'sendMessageService($marzban_list_get, $configLinks, $output_config_link, $dataoutput[\'username\'], $shoppingInfo, $caption, $invoice[\'id_invoice\'], $invoice[\'id_user\'], $image);') !== false,
         $label . ' payment finalizer should deliver the created reseller service after approval'
     );
+    assertTrueValue(
+        strpos($source, 'sendmessage($Payment_report[\'id_user\'], $textbotlang[\'users\'][\'selectoption\'], $keyboard, \'HTML\');') === false,
+        $label . ' payment finalizer should not send an extra generic menu prompt after delivery'
+    );
 }
 
 passTest('ResellerExactOrderPaymentTest');

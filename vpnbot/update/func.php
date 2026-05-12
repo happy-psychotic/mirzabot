@@ -152,7 +152,6 @@ function DirectPaymentbot($order_id,$image = 'images.jpg'){
             ]
         ]);
         sendMessageService($marzban_list_get, $configLinks, $output_config_link, $dataoutput['username'], $shoppingInfo, $caption, $invoice['id_invoice'], $invoice['id_user'], $image);
-        sendmessage($Payment_report['id_user'], $textbotlang['users']['selectoption'], $keyboard, 'HTML');
 
         $userbalance['Balance'] = max(0, intval($userbalance['Balance']) - intval($invoice['price_product']));
         file_put_contents("data/{$Payment_report['id_user']}/{$Payment_report['id_user']}.json",json_encode($userbalance));
