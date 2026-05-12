@@ -71,6 +71,9 @@ if [[ "$DRY_RUN" == "1" ]]; then
   RSYNC_ARGS+=(--dry-run)
 fi
 
+# Ensure root dir and vpnbot are writable by www-data before and after rsync
+ssh "$HOST" "chmod 755 '$APP_DIR' && chmod 777 '$APP_DIR/vpnbot' 2>/dev/null || true"
+
 rsync "${RSYNC_ARGS[@]}" "$TMP_DIR"/ "$HOST:$APP_DIR"/
 
 if [[ "$DRY_RUN" == "1" ]]; then
