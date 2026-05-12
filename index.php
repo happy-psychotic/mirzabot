@@ -527,11 +527,13 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
         sendmessage($from_id, $textbotlang['users']['sell']['service_sell'], $keyboard_json, 'html');
     }
 } elseif ($datain == 'next_page') {
-    $numpage = select("invoice", "id_user", "id_user", $from_id, "count");
+    $stmtCount = $pdo->prepare("SELECT COUNT(*) FROM invoice WHERE id_user = :uid AND (status = 'active' OR status = 'end_of_time' OR status = 'end_of_volume' OR status = 'sendedwarn' OR status = 'send_on_hold')");
+    $stmtCount->execute([':uid' => $from_id]);
+    $numpage = (int)$stmtCount->fetchColumn();
     $page = $user['pagenumber'];
     $items_per_page = 20;
     $sum = $user['pagenumber'] * $items_per_page;
-    if ($sum > $numpage) {
+    if ($sum >= $numpage) {
         $next_page = 1;
     } else {
         $next_page = $page + 1;
@@ -540,8 +542,8 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
     $keyboardlists = [
         'inline_keyboard' => [],
     ];
-    $stmt = $pdo->prepare("SELECT * FROM invoice WHERE id_user = '$from_id' AND (status = 'active' OR status = 'end_of_time'  OR status = 'end_of_volume' OR status = 'sendedwarn' OR status = 'send_on_hold') ORDER BY time_sell DESC LIMIT $start_index, $items_per_page");
-    $stmt->execute();
+    $stmt = $pdo->prepare("SELECT * FROM invoice WHERE id_user = :uid AND (status = 'active' OR status = 'end_of_time' OR status = 'end_of_volume' OR status = 'sendedwarn' OR status = 'send_on_hold') ORDER BY time_sell DESC LIMIT $start_index, $items_per_page");
+    $stmt->execute([':uid' => $from_id]);
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         $keyboardlists['inline_keyboard'][] = [
             ['text' => invoice_list_label($row, $setting['statusnamecustom']), 'callback_data' => "product_" . $row['id_invoice']],
@@ -559,21 +561,18 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
     update("user", "pagenumber", $next_page, "id", $from_id);
     Editmessagetext($from_id, $message_id, $textbotlang['users']['sell']['service_sell'], $keyboard_json);
 } elseif ($datain == 'previous_page') {
-    $numpage = select("invoice", "id_user", "id_user", $from_id, "count");
+    $stmtCount = $pdo->prepare("SELECT COUNT(*) FROM invoice WHERE id_user = :uid AND (status = 'active' OR status = 'end_of_time' OR status = 'end_of_volume' OR status = 'sendedwarn' OR status = 'send_on_hold')");
+    $stmtCount->execute([':uid' => $from_id]);
+    $numpage = (int)$stmtCount->fetchColumn();
     $page = $user['pagenumber'];
     $items_per_page = 20;
-    $sum = $user['pagenumber'] * $items_per_page;
-    if ($sum > $numpage) {
-        $previous_page = 1;
-    } else {
-        $previous_page = $page - 1;
-    }
+    $previous_page = ($page <= 1) ? 1 : $page - 1;
     $start_index = ($previous_page - 1) * $items_per_page;
     $keyboardlists = [
         'inline_keyboard' => [],
     ];
-    $stmt = $pdo->prepare("SELECT * FROM invoice WHERE id_user = '$from_id' AND (status = 'active' OR status = 'end_of_time'  OR status = 'end_of_volume' OR status = 'sendedwarn' OR status = 'send_on_hold') ORDER BY time_sell DESC LIMIT $previous_page, $items_per_page");
-    $stmt->execute();
+    $stmt = $pdo->prepare("SELECT * FROM invoice WHERE id_user = :uid AND (status = 'active' OR status = 'end_of_time' OR status = 'end_of_volume' OR status = 'sendedwarn' OR status = 'send_on_hold') ORDER BY time_sell DESC LIMIT $start_index, $items_per_page");
+    $stmt->execute([':uid' => $from_id]);
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         $keyboardlists['inline_keyboard'][] = [
             ['text' => invoice_list_label($row, $setting['statusnamecustom']), 'callback_data' => "product_" . $row['id_invoice']],
