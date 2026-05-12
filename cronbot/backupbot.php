@@ -4,9 +4,9 @@ require_once '../function.php';
 require_once '../botapi.php';
 
 $reportbackup = select("topicid", "idreport", "report", "backupfile", "select")['idreport'];
-$destination = getcwd();
+$destination = sys_get_temp_dir();
 $setting = select("setting", "*");
-$sourcefir = dirname($destination);
+$sourcefir = dirname(__DIR__);
 $botlist = select("botsaz", "*", null, null, "fetchAll");
 if ($botlist) {
     foreach ($botlist as $bot) {
@@ -22,8 +22,8 @@ if ($botlist) {
     }
 }
 
-$backup_file_name = 'backup_' . date("Y-m-d") . '.sql';
-$zip_file_name = 'backup_' . date("Y-m-d") . '.zip';
+$backup_file_name = $destination . '/backup_' . date("Y-m-d") . '.sql';
+$zip_file_name    = $destination . '/backup_' . date("Y-m-d") . '.zip';
 $dbhost = empty($dbhost) ? "localhost" : $dbhost;
 $command = "mysqldump -h $dbhost -u $usernamedb -p'$passworddb' --no-tablespaces --ssl-mode=DISABLED $dbname > $backup_file_name";
 
