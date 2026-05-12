@@ -225,11 +225,35 @@ if ($text == "📞 تنظیم نام کاربری پشتیبانی") {
     update("botsaz", "admin_ids", json_encode($admin_ids), "bot_token", $ApiToken);
     sendmessage($from_id, "✅ ادمین با موفقیت حذف گردید", null, 'HTML');
 } elseif ($text == "🔍 جستجو کاربر") {
-    sendmessage($from_id, $textbotlang['Admin']['ManageUser']['GetIdUserunblock'], $backadmin, 'HTML');
+    $keyboardSearchUser = json_encode([
+        'keyboard' => [
+            [['text' => "👤 انتخاب از مخاطبین", 'request_user' => ['request_id' => 1, 'user_is_bot' => false]]],
+            [['text' => "🏠 بازگشت به منوی اصلی"]],
+        ],
+        'resize_keyboard' => true,
+        'one_time_keyboard' => true,
+    ]);
+    sendmessage($from_id, "🔍 شناسه کاربر را ارسال کنید:\n\n• آیدی عددی (مثال: 123456789)\n• یوزرنیم تلگرام (مثال: @username)\n• یا از دکمه زیر کاربر را انتخاب کنید", $keyboardSearchUser, 'HTML');
     step('show_info', $from_id);
-} elseif ($user['step'] == "show_info" || strpos($text, "/user ") !== false) {
+} elseif ($user['step'] == "show_info" || strpos($text, "/user ") !== false || strpos($text, "/id ") !== false) {
     if (explode(" ", $text)[0] == "/user") {
         $id_user = explode(" ", $text)[1];
+    } elseif (explode(" ", $text)[0] == "/id") {
+        $id_user = explode(" ", $text)[1];
+    } elseif ($contact_id != 0) {
+        $id_user = strval($contact_id);
+    } elseif (isset($update['message']['user_shared']['user_id'])) {
+        $id_user = strval($update['message']['user_shared']['user_id']);
+    } elseif (strpos($text, '@') === 0) {
+        $search_username = ltrim($text, '@');
+        $found = $pdo->prepare("SELECT id FROM user WHERE username = ? LIMIT 1");
+        $found->execute([$search_username]);
+        $id_user = $found->fetchColumn();
+        if (!$id_user) {
+            sendmessage($from_id, "❌ کاربری با این یوزرنیم پیدا نشد.", $keyboardadmin, 'HTML');
+            step('home', $from_id);
+            return;
+        }
     } else {
         $id_user = $text;
     }

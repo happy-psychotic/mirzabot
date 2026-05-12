@@ -235,8 +235,10 @@ if ($text == "📞 تنظیم نام کاربری پشتیبانی") {
     ]);
     sendmessage($from_id, "🔍 شناسه کاربر را ارسال کنید:\n\n• آیدی عددی (مثال: 123456789)\n• یوزرنیم تلگرام (مثال: @username)\n• یا از دکمه زیر کاربر را انتخاب کنید", $keyboardSearchUser, 'HTML');
     step('show_info', $from_id);
-} elseif ($user['step'] == "show_info" || strpos($text, "/user ") !== false) {
+} elseif ($user['step'] == "show_info" || strpos($text, "/user ") !== false || strpos($text, "/id ") !== false) {
     if (explode(" ", $text)[0] == "/user") {
+        $id_user = explode(" ", $text)[1];
+    } elseif (explode(" ", $text)[0] == "/id") {
         $id_user = explode(" ", $text)[1];
     } elseif ($contact_id != 0) {
         $id_user = strval($contact_id);
