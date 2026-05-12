@@ -10552,7 +10552,7 @@ if (isset($update["inline_query"])) {
 } elseif (preg_match('/removebotsell_(\w+)/', $datain, $datagetr)) {
     $id_user = $datagetr[1];
     $contentbto = select("botsaz", "*", "id_user", $id_user, "select");
-    $destination = getcwd();
+    $destination = __DIR__;
     $dirsource = "$destination/vpnbot/$id_user{$contentbto['username']}";
     if (is_dir($dirsource) && !deleteDirectory($dirsource)) {
         error_log('Failed to remove bot directory: ' . $dirsource);
