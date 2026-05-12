@@ -526,22 +526,20 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
     } else {
         sendmessage($from_id, $textbotlang['users']['sell']['service_sell'], $keyboard_json, 'html');
     }
-} elseif ($datain == 'next_page') {
+} elseif ($datain == 'next_page' || $datain == 'previous_page') {
     $stmtCount = $pdo->prepare("SELECT COUNT(*) FROM invoice WHERE id_user = :uid AND (status = 'active' OR status = 'end_of_time' OR status = 'end_of_volume' OR status = 'sendedwarn' OR status = 'send_on_hold')");
     $stmtCount->execute([':uid' => $from_id]);
     $numpage = (int)$stmtCount->fetchColumn();
-    $page = $user['pagenumber'];
+    $page    = (int)$user['pagenumber'];
     $items_per_page = 20;
-    $sum = $user['pagenumber'] * $items_per_page;
-    if ($sum >= $numpage) {
-        $next_page = 1;
+    $total_pages = max(1, (int)ceil($numpage / $items_per_page));
+    if ($datain == 'next_page') {
+        $new_page = ($page >= $total_pages) ? 1 : $page + 1;
     } else {
-        $next_page = $page + 1;
+        $new_page = ($page <= 1) ? $total_pages : $page - 1;
     }
-    $start_index = ($next_page - 1) * $items_per_page;
-    $keyboardlists = [
-        'inline_keyboard' => [],
-    ];
+    $start_index = ($new_page - 1) * $items_per_page;
+    $keyboardlists = ['inline_keyboard' => []];
     $stmt = $pdo->prepare("SELECT * FROM invoice WHERE id_user = :uid AND (status = 'active' OR status = 'end_of_time' OR status = 'end_of_volume' OR status = 'sendedwarn' OR status = 'send_on_hold') ORDER BY time_sell DESC LIMIT $start_index, $items_per_page");
     $stmt->execute([':uid' => $from_id]);
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
@@ -549,46 +547,17 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
             ['text' => invoice_list_label($row, $setting['statusnamecustom']), 'callback_data' => "product_" . $row['id_invoice']],
         ];
     }
-    $pagination_buttons = [
-        ['text' => $textbotlang['users']['page']['next'],     'callback_data' => 'next_page'],
-        ['text' => $textbotlang['users']['page']['previous'], 'callback_data' => 'previous_page'],
-    ];
-    $backuser = [['text' => "🔙 بازگشت به منوی اصلی", 'callback_data' => 'backuser']];
     $keyboardlists['inline_keyboard'][] = [['text' => "🔍 جستجو سریع", 'callback_data' => "searchservice"]];
-    $keyboardlists['inline_keyboard'][] = $pagination_buttons;
-    $keyboardlists['inline_keyboard'][] = $backuser;
-    $keyboard_json = json_encode($keyboardlists);
-    update("user", "pagenumber", $next_page, "id", $from_id);
-    Editmessagetext($from_id, $message_id, $textbotlang['users']['sell']['service_sell'], $keyboard_json);
-} elseif ($datain == 'previous_page') {
-    $stmtCount = $pdo->prepare("SELECT COUNT(*) FROM invoice WHERE id_user = :uid AND (status = 'active' OR status = 'end_of_time' OR status = 'end_of_volume' OR status = 'sendedwarn' OR status = 'send_on_hold')");
-    $stmtCount->execute([':uid' => $from_id]);
-    $numpage = (int)$stmtCount->fetchColumn();
-    $page = $user['pagenumber'];
-    $items_per_page = 20;
-    $previous_page = ($page <= 1) ? 1 : $page - 1;
-    $start_index = ($previous_page - 1) * $items_per_page;
-    $keyboardlists = [
-        'inline_keyboard' => [],
-    ];
-    $stmt = $pdo->prepare("SELECT * FROM invoice WHERE id_user = :uid AND (status = 'active' OR status = 'end_of_time' OR status = 'end_of_volume' OR status = 'sendedwarn' OR status = 'send_on_hold') ORDER BY time_sell DESC LIMIT $start_index, $items_per_page");
-    $stmt->execute([':uid' => $from_id]);
-    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        $keyboardlists['inline_keyboard'][] = [
-            ['text' => invoice_list_label($row, $setting['statusnamecustom']), 'callback_data' => "product_" . $row['id_invoice']],
-        ];
-    }
-    $pagination_buttons = [
-        ['text' => $textbotlang['users']['page']['next'],     'callback_data' => 'next_page'],
+    $keyboardlists['inline_keyboard'][] = [
         ['text' => $textbotlang['users']['page']['previous'], 'callback_data' => 'previous_page'],
+        ['text' => "📄 {$new_page}/{$total_pages}", 'callback_data' => 'noop'],
+        ['text' => $textbotlang['users']['page']['next'],     'callback_data' => 'next_page'],
     ];
-    $backuser = [['text' => "🔙 بازگشت به منوی اصلی", 'callback_data' => 'backuser']];
-    $keyboardlists['inline_keyboard'][] = [['text' => "🔍 جستجو سریع", 'callback_data' => "searchservice"]];
-    $keyboardlists['inline_keyboard'][] = $pagination_buttons;
-    $keyboardlists['inline_keyboard'][] = $backuser;
+    $keyboardlists['inline_keyboard'][] = [['text' => "🔙 بازگشت به منوی اصلی", 'callback_data' => 'backuser']];
     $keyboard_json = json_encode($keyboardlists);
-    update("user", "pagenumber", $previous_page, "id", $from_id);
-    Editmessagetext($from_id, $message_id, $textbotlang['users']['sell']['service_sell'], $keyboard_json);
+    update("user", "pagenumber", $new_page, "id", $from_id);
+    deletemessage($from_id, $message_id);
+    sendmessage($from_id, $textbotlang['users']['sell']['service_sell'], $keyboard_json, 'html');
 } elseif ($datain == "notusernameme") {
     sendmessage($from_id, $textbotlang['users']['stateus']['SendUsername'], $backuser, 'html');
     step('getusernameinfo', $from_id);
