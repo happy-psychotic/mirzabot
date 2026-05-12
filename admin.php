@@ -10576,9 +10576,7 @@ if (isset($update["inline_query"])) {
     }
     step("home", $from_id);
     $userdate = json_decode($user['Processing_value'], true);
-    $botinfo = json_decode(select("botsaz", "setting", "id_user", $userdate['id_user'], "select")['setting'], true);
-    $botinfo['minpricevolume'] = $text;
-    update("botsaz", "setting", json_encode($botinfo), "id_user", $userdate['id_user']);
+    update("user", "minpricevolume", intval($text), "id", $userdate['id_user']);
     sendmessage($from_id, "✅ قیمت با موفقیت ذخیره گردید.", $keyboardadmin, 'HTML');
 } elseif (preg_match('/settimepricesrc_(\w+)/', $datain, $datagetr)) {
     $id_user = $datagetr[1];
@@ -10592,9 +10590,7 @@ if (isset($update["inline_query"])) {
     }
     step("home", $from_id);
     $userdate = json_decode($user['Processing_value'], true);
-    $botinfo = json_decode(select("botsaz", "setting", "id_user", $userdate['id_user'], "select")['setting'], true);
-    $botinfo['minpricetime'] = $text;
-    update("botsaz", "setting", json_encode($botinfo), "id_user", $userdate['id_user']);
+    update("user", "minpricetime", intval($text), "id", $userdate['id_user']);
     sendmessage($from_id, "✅ قیمت با موفقیت ذخیره گردید.", $keyboardadmin, 'HTML');
 }
 if ($datain == "settimecornday" && $adminrulecheck['rule'] == "administrator") {

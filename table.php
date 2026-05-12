@@ -1409,7 +1409,10 @@ try {
     file_put_contents('error_log app', $e->getMessage());
 }
 
-
+try {
+    addFieldToTable("user", "minpricevolume", "0", "INT DEFAULT 0");
+    addFieldToTable("user", "minpricetime",   "0", "INT DEFAULT 0");
+} catch (Exception $e) {}
 
 try {
     $result = $connect->query("SHOW TABLES LIKE 'logs_api'");

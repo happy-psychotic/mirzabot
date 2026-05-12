@@ -2219,15 +2219,14 @@ function agentPricePerUnit(string $agent_user_id, string $agent_type, array $pan
     global $pdo;
     $gigPrice = intval(json_decode($panel['pricecustomvolume'] ?? '{}', true)[$agent_type] ?? 0);
     $dayPrice = intval(json_decode($panel['pricecustomtime']   ?? '{}', true)[$agent_type] ?? 0);
-    $botsaz = $pdo->prepare("SELECT setting FROM botsaz WHERE id_user = :uid LIMIT 1");
-    $botsaz->execute([':uid' => $agent_user_id]);
-    $row = $botsaz->fetch(PDO::FETCH_ASSOC);
+    $stmt = $pdo->prepare("SELECT minpricevolume, minpricetime FROM user WHERE id = :uid LIMIT 1");
+    $stmt->execute([':uid' => $agent_user_id]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
     if ($row) {
-        $s = json_decode($row['setting'], true);
-        if (!empty($s['minpricevolume']) && intval($s['minpricevolume']) > 0)
-            $gigPrice = intval($s['minpricevolume']);
-        if (!empty($s['minpricetime']) && intval($s['minpricetime']) > 0)
-            $dayPrice = intval($s['minpricetime']);
+        if (intval($row['minpricevolume']) > 0)
+            $gigPrice = intval($row['minpricevolume']);
+        if (intval($row['minpricetime']) > 0)
+            $dayPrice = intval($row['minpricetime']);
     }
     return [$gigPrice, $dayPrice];
 }
