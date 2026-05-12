@@ -10499,7 +10499,7 @@ if (isset($update["inline_query"])) {
     $admin_ids = json_encode(array(
         $userdate['id_user']
     ));
-    $destination = getcwd();
+    $destination = __DIR__;
     $dirsource = "$destination/vpnbot/{$userdate['id_user']}{$userdate['username']}";
     if (is_dir($dirsource) && !deleteDirectory($dirsource)) {
         error_log('Failed to remove existing bot directory: ' . $dirsource);
