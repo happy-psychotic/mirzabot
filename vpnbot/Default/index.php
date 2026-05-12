@@ -1041,22 +1041,23 @@ if ($text == $text_bot_var['btn_keyboard']['buy'] && $setting['active_step_note'
     $stmt->execute();
     $stmt->close();
     if ($datafactor['price_product'] > $user['Balance'] && intval($datafactor['price_product']) != 0) {
-        $marzbandirectpay = select("shopSetting", "*", "Namevalue", "statusdirectpabuy", "select")['value'];
         $Balance_prim = $datafactor['price_product'] - $user['Balance'];
         if ($Balance_prim <= 1)
             $Balance_prim = 0;
-        $minbalance = number_format(json_decode(select("PaySetting", "*", "NamePay", "minbalance", "select")['ValuePay'], true)[$userbot['agent']]);
-        $maxbalance = number_format(json_decode(select("PaySetting", "*", "NamePay", "maxbalance", "select")['ValuePay'], true)[$userbot['agent']]);
+        savedata("save", "pending_payment_type", "reseller_buy");
+        savedata("save", "pending_invoice_id", $randomString);
+        savedata("save", "pending_payment_amount", $Balance_prim);
         $bakinfos = json_encode([
             'inline_keyboard' => [
                 [
-                    ['text' => $textbotlang['users']['stateus']['backinfo'], 'callback_data' => "account"],
+                    ['text' => $textbotlang['users']['stateus']['backinfo'], 'callback_data' => "backuser"],
                 ]
             ]
         ]);
-        Editmessagetext($from_id, $message_id, "❌ موجودی شما برای خرید سرویس کافی نمی باشد.
-💸  برای افزایش موجودی مبلغ را  به تومان وارد کنید:
-✅  حداقل مبلغ $minbalance حداکثر مبلغ $maxbalance تومان می باشد", $bakinfos, 'HTML');
+        Editmessagetext($from_id, $message_id, "❌ موجودی کیف پول شما برای این سفارش کافی نیست.
+💳 مبلغ باقی مانده برای پرداخت این سفارش: " . number_format($Balance_prim) . " تومان
+
+همین مبلغ را ارسال کنید، سپس رسید پرداخت را بفرستید تا بعد از تایید، همان سرویس برای شما ساخته و ارسال شود.", $bakinfos, 'HTML');
         step('get_price', $from_id);
         return;
     }
@@ -1293,13 +1294,24 @@ $textonebuy
         sendmessage($from_id, $textbotlang['Admin']['agent']['invalidvlue'], $backuser, 'HTML');
         return;
     }
+    $userdate = json_decode($user['Processing_value'], true);
+    $pendingPaymentType = $userdate['pending_payment_type'] ?? '';
+    $paymentAmount = intval($text);
+    $invoice = "0 | 0";
+    if ($pendingPaymentType === 'reseller_buy' && !empty($userdate['pending_invoice_id'])) {
+        $requiredAmount = intval($userdate['pending_payment_amount'] ?? 0);
+        if ($paymentAmount !== $requiredAmount) {
+            sendmessage($from_id, "❌ برای این سفارش باید دقیقا مبلغ " . number_format($requiredAmount) . " تومان را پرداخت کنید.", $backuser, 'HTML');
+            return;
+        }
+        $invoice = "reseller_buy|" . $userdate['pending_invoice_id'];
+    }
     $dateacc = date('Y/m/d H:i:s');
     $randomString = bin2hex(random_bytes(5));
     $stmt = $connect->prepare("INSERT INTO Payment_report (id_user,id_order,time,price,payment_Status,Payment_Method,id_invoice,bottype) VALUES (?,?,?,?,?,?,?,?)");
     $payment_Status = "Unpaid";
     $Payment_Method = "cart to cart";
-    $invoice = "0 | 0";
-    $stmt->bind_param("ssssssss", $from_id, $randomString, $dateacc, $text, $payment_Status, $Payment_Method, $invoice, $ApiToken);
+    $stmt->bind_param("ssssssss", $from_id, $randomString, $dateacc, $paymentAmount, $payment_Status, $Payment_Method, $invoice, $ApiToken);
     $stmt->execute();
     sendmessage($from_id, $setting['cart_info'], $backuser, 'HTML');
     step("getresidcart", $from_id);
@@ -1316,9 +1328,19 @@ $textonebuy
         ]
     ]);
     $format_price_cart = number_format($PaymentReport['price']);
+    $paymentTarget = explode('|', (string) $PaymentReport['id_invoice'], 2);
+    $receiptTitle = "افزایش موجودی";
+    if (($paymentTarget[0] ?? '') === 'reseller_buy' && !empty($paymentTarget[1])) {
+        $linkedInvoice = select("invoice", "*", "id_invoice", $paymentTarget[1], "select");
+        if ($linkedInvoice) {
+            $receiptTitle = "پرداخت سفارش\n🌿 محصول: {$linkedInvoice['name_product']}\n🇺🇳 لوکیشن: {$linkedInvoice['Service_location']}";
+        } else {
+            $receiptTitle = "پرداخت سفارش";
+        }
+    }
     $textsendrasid = "
 ⭕️ یک پرداخت جدید انجام شده است .
-افزایش موجودی            
+$receiptTitle            
 👤 شناسه کاربر:  <a href = \"tg://user?id=$from_id\">$from_id</a>
 🛒 کد پیگیری پرداخت: {$PaymentReport['id_order']}
 ⚜️ نام کاربری: @$username
@@ -1339,7 +1361,11 @@ $textonebuy
         step('home', $id_admin);
     }
     step('home', $from_id);
-    sendmessage($from_id, "💎 رسید شما ارسال و پس از بررسی حساب کاربری شما شارژ خواهد شد.", $keyboard, 'HTML');
+    if (($paymentTarget[0] ?? '') === 'reseller_buy') {
+        sendmessage($from_id, "💎 رسید شما برای همین سفارش ارسال شد. بعد از تایید، سرویس به صورت خودکار ساخته و برای شما ارسال می‌شود.", $keyboard, 'HTML');
+    } else {
+        sendmessage($from_id, "💎 رسید شما ارسال و پس از بررسی حساب کاربری شما شارژ خواهد شد.", $keyboard, 'HTML');
+    }
 } elseif (preg_match('/product_(\w+)/', $datain, $dataget)) {
     $username = $dataget[1];
     $sql = "SELECT * FROM invoice WHERE id_invoice = :username AND id_user = :id_user";
