@@ -438,6 +438,21 @@ if (preg_match('~^(?:vless|vmess|ss|trojan)://[^\s]+#(\S+)~i', trim($text), $cfg
         }
     }
 }
+if (!function_exists('invoice_list_label')) {
+    function invoice_list_label(array $row, string $statusnamecustom): string {
+        $icon = in_array($row['Status'], ['active', 'sendedwarn', 'send_on_hold']) ? '✅' : '❌';
+        if ($statusnamecustom == 'onnamecustom' && $row['note'] !== null) {
+            $displayNote = strpos($row['note'], '__name:') === 0 ? substr($row['note'], 7) : $row['note'];
+            $name = $row['username'] . ' | ' . $displayNote;
+        } else {
+            $name = ($row['note'] !== null && strpos($row['note'], '__name:') === 0)
+                ? substr($row['note'], 7)
+                : $row['username'];
+        }
+        $vol = $row['Volume'] > 0 ? number_format((float)$row['Volume'], 1) . ' GB' : '∞';
+        return $icon . ' ' . $name . ' | ' . $vol;
+    }
+}
 if ($text == "/start" || $datain == "start" || $text == "start") {
     sendmessage($from_id, $datatextbot['text_start'], $keyboard, "html");
     update("user", "Processing_value", "0", "id", $from_id);
@@ -476,21 +491,6 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
     update("user", "number", $user_phone, "id", $from_id);
     step('home', $from_id);
 } elseif ($text == $datatextbot['text_Purchased_services'] || $datain == "backorder" || $text == "/services") {
-    if (!function_exists('invoice_list_label')) {
-        function invoice_list_label(array $row, string $statusnamecustom): string {
-            $icon = in_array($row['Status'], ['active', 'sendedwarn', 'send_on_hold']) ? '✅' : '❌';
-            if ($statusnamecustom == 'onnamecustom' && $row['note'] !== null) {
-                $displayNote = strpos($row['note'], '__name:') === 0 ? substr($row['note'], 7) : $row['note'];
-                $name = $row['username'] . ' | ' . $displayNote;
-            } else {
-                $name = ($row['note'] !== null && strpos($row['note'], '__name:') === 0)
-                    ? substr($row['note'], 7)
-                    : $row['username'];
-            }
-            $vol = $row['Volume'] > 0 ? number_format((float)$row['Volume'], 1) . ' GB' : '∞';
-            return $icon . ' ' . $name . ' | ' . $vol;
-        }
-    }
     $stmt = $pdo->prepare("SELECT * FROM invoice WHERE id_user = :id_user AND (status = 'active' OR status = 'end_of_time'  OR status = 'end_of_volume' OR status = 'sendedwarn' OR Status = 'send_on_hold')");
     $stmt->bindParam(':id_user', $from_id);
     $stmt->execute();
