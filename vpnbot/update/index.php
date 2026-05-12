@@ -58,6 +58,7 @@ if (!isset($setting['active_step_note'])) {
     $setting['active_step_note'] = false;
     update("botsaz", "setting", json_encode($setting), "bot_token", $ApiToken);
 }
+$customVolumeDisabled = !empty($setting['disable_custom_volume']);
 $settingmain = select("setting", "*", null, null, "select");
 $showcard = 1;
 $users_ids = select("user", "*", "bottype", $ApiToken, "FETCH_COLUMN");
@@ -627,7 +628,7 @@ if ($text == $text_bot_var['btn_keyboard']['buy'] && $setting['active_step_note'
         if ($productnotexits != 0 and $setting['show_product'] == false) {
             if ($settingmain['statuscategorygenral'] == "offcategorys") {
                 $statuscustomvolume = json_decode($locationproduct['customvolume'], true)[$userbot['agent']];
-                if ($statuscustomvolume == "1" && $locationproduct['type'] != "Manualsale") {
+                if (!$customVolumeDisabled && $statuscustomvolume == "1" && $locationproduct['type'] != "Manualsale") {
                     $statuscustom = true;
                 } else {
                     $statuscustom = false;
@@ -650,6 +651,10 @@ if ($text == $text_bot_var['btn_keyboard']['buy'] && $setting['active_step_note'
                 return;
             }
         } else {
+            if ($customVolumeDisabled) {
+                sendmessage($from_id, $textbotlang['Admin']['Product']['nullpProduct'], null, 'HTML');
+                return;
+            }
             $marzban_list_get = $locationproduct;
             $eextraprice = $setting['pricevolume'];
             $mainvolume = json_decode($marzban_list_get['mainvolume'], true);
@@ -670,6 +675,11 @@ if ($text == $text_bot_var['btn_keyboard']['buy'] && $setting['active_step_note'
     }
     sendmessage($from_id, "📌 موقعیت سرویس خود را انتخاب کنید", $list_marzban_panel_user, 'HTML');
 } elseif ($datain == "customvolumebuy") {
+    if ($customVolumeDisabled) {
+        sendmessage($from_id, $textbotlang['Admin']['Product']['nullpProduct'], $keyboard, 'HTML');
+        step('home', $from_id);
+        return;
+    }
     $userdate = json_decode($user['Processing_value'], true);
     $marzban_list_get = select("marzban_panel", "*", "name_panel", $userdate['name_panel'], "select");
     $eextraprice = $setting['pricevolume'];
@@ -706,7 +716,7 @@ if ($text == $text_bot_var['btn_keyboard']['buy'] && $setting['active_step_note'
     if ($productnotexits != 0 and $setting['show_product'] == false) {
         if ($settingmain['statuscategorygenral'] == "offcategorys") {
             $statuscustomvolume = json_decode($locationproduct['customvolume'], true)[$userbot['agent']];
-            if ($statuscustomvolume == "1" && $locationproduct['type'] != "Manualsale") {
+            if (!$customVolumeDisabled && $statuscustomvolume == "1" && $locationproduct['type'] != "Manualsale") {
                 $statuscustom = true;
             } else {
                 $statuscustom = false;
@@ -727,6 +737,10 @@ if ($text == $text_bot_var['btn_keyboard']['buy'] && $setting['active_step_note'
             Editmessagetext($from_id, $message_id, "📌 دسته بندی خود را انتخاب نمایید!", KeyboardCategory($locationproduct['name_panel'], $userbot['agent'], "backuser"));
         }
     } else {
+        if ($customVolumeDisabled) {
+            sendmessage($from_id, $textbotlang['Admin']['Product']['nullpProduct'], null, 'HTML');
+            return;
+        }
         deletemessage($from_id, $message_id);
         $marzban_list_get = $locationproduct;
         $eextraprice = $setting['pricevolume'];
@@ -748,7 +762,7 @@ if ($text == $text_bot_var['btn_keyboard']['buy'] && $setting['active_step_note'
     $locationproduct = select("marzban_panel", "*", "name_panel", $userdate['name_panel'], "seelct");
     $query = "SELECT * FROM product WHERE (Location = '{$locationproduct['name_panel']}' OR Location = '/all') AND category = '$categorynames' AND agent= '{$userbot['agent']}' ";
     $statuscustomvolume = json_decode($locationproduct['customvolume'], true)[$userbot['agent']];
-    if ($statuscustomvolume == "1" && $locationproduct['type'] != "Manualsale") {
+    if (!$customVolumeDisabled && $statuscustomvolume == "1" && $locationproduct['type'] != "Manualsale") {
         $statuscustom = true;
     } else {
         $statuscustom = false;
@@ -1569,7 +1583,7 @@ $output
     $productnotexits = $stmt->rowCount();
     if ($productnotexits != 0 and $setting['show_product'] == false) {
         $statuscustomvolume = json_decode($marzban_list_get['customvolume'], true)[$userbot['agent']];
-        if ($statuscustomvolume == "1" && $marzban_list_get['type'] != "Manualsale") {
+        if (!$customVolumeDisabled && $statuscustomvolume == "1" && $marzban_list_get['type'] != "Manualsale") {
             $statuscustom = true;
         } else {
             $statuscustom = false;
@@ -1578,6 +1592,10 @@ $output
         $prodcut = KeyboardProduct($marzban_list_get['name_panel'], $query, 0, "selectproductextends_", $statuscustom, "backuser", null, $customvolume = "customvolumeextend");
         sendmessage($from_id, "🛍️ لطفاً سرویسی که می‌خواهید تمدید کنید را انتخاب کنید!", $prodcut, 'HTML');
     } else {
+        if ($customVolumeDisabled) {
+            sendmessage($from_id, $textbotlang['Admin']['Product']['nullpProduct'], null, 'HTML');
+            return;
+        }
         $custompricevalue = $setting['pricevolume'];
         $mainvolume = json_decode($marzban_list_get['mainvolume'], true);
         $mainvolume = $mainvolume[$userbot['agent']];
@@ -1590,6 +1608,11 @@ $output
         step('gettimecustomvolextend', $from_id);
     }
 } elseif ($datain == "customvolumeextend") {
+    if ($customVolumeDisabled) {
+        sendmessage($from_id, $textbotlang['Admin']['Product']['nullpProduct'], $keyboard, 'HTML');
+        step('home', $from_id);
+        return;
+    }
     $userdate = json_decode($user['Processing_value'], true);
     $marzban_list_get = select("marzban_panel", "*", "name_panel", $userdate['name_panel'], "select");
     $custompricevalue = $setting['pricevolume'];
