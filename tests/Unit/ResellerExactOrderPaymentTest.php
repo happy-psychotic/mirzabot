@@ -14,16 +14,16 @@ foreach ($indexFiles as $file) {
     $label = basename(dirname($file));
 
     assertTrueValue(
-        strpos($source, 'savedata("save", "pending_payment_type", "reseller_buy");') !== false,
-        $label . ' should mark low-balance reseller purchases as exact-order payments'
+        strpos($source, '$invoice = "reseller_buy|" . $randomString;') !== false,
+        $label . ' should create an exact-order payment report immediately for low-balance reseller purchases'
     );
     assertTrueValue(
-        strpos($source, '$invoice = "reseller_buy|" . $userdate[\'pending_invoice_id\'];') !== false,
-        $label . ' should link the payment report to the selected reseller order'
+        strpos($source, 'savedata("clear", "id_order", $paymentOrderId);') !== false,
+        $label . ' should jump directly to receipt collection after creating the exact-order payment'
     );
     assertTrueValue(
-        strpos($source, 'همان سرویس برای شما ساخته و ارسال شود') !== false,
-        $label . ' should tell the user the paid order will be auto-delivered after approval'
+        strpos($source, 'بعد از پرداخت، فقط رسید را بفرستید') !== false,
+        $label . ' should no longer ask the user to manually type the known shortage amount'
     );
 }
 

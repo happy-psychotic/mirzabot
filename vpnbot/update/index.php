@@ -1044,21 +1044,21 @@ if ($text == $text_bot_var['btn_keyboard']['buy'] && $setting['active_step_note'
         $Balance_prim = $datafactor['price_product'] - $user['Balance'];
         if ($Balance_prim <= 1)
             $Balance_prim = 0;
-        savedata("save", "pending_payment_type", "reseller_buy");
-        savedata("save", "pending_invoice_id", $randomString);
-        savedata("save", "pending_payment_amount", $Balance_prim);
-        $bakinfos = json_encode([
-            'inline_keyboard' => [
-                [
-                    ['text' => $textbotlang['users']['stateus']['backinfo'], 'callback_data' => "backuser"],
-                ]
-            ]
-        ]);
-        Editmessagetext($from_id, $message_id, "❌ موجودی کیف پول شما برای این سفارش کافی نیست.
+        $dateacc = date('Y/m/d H:i:s');
+        $paymentOrderId = bin2hex(random_bytes(5));
+        $stmt = $connect->prepare("INSERT INTO Payment_report (id_user,id_order,time,price,payment_Status,Payment_Method,id_invoice,bottype) VALUES (?,?,?,?,?,?,?,?)");
+        $payment_Status = "Unpaid";
+        $Payment_Method = "cart to cart";
+        $invoice = "reseller_buy|" . $randomString;
+        $stmt->bind_param("ssssssss", $from_id, $paymentOrderId, $dateacc, $Balance_prim, $payment_Status, $Payment_Method, $invoice, $ApiToken);
+        $stmt->execute();
+        sendmessage($from_id, "❌ موجودی کیف پول شما برای این سفارش کافی نیست.
 💳 مبلغ باقی مانده برای پرداخت این سفارش: " . number_format($Balance_prim) . " تومان
 
-همین مبلغ را ارسال کنید، سپس رسید پرداخت را بفرستید تا بعد از تایید، همان سرویس برای شما ساخته و ارسال شود.", $bakinfos, 'HTML');
-        step('get_price', $from_id);
+شماره کارت را در پیام بعدی دریافت می‌کنید. بعد از پرداخت، فقط رسید را بفرستید تا همان سرویس برای شما ساخته و ارسال شود.", $backuser, 'HTML');
+        sendmessage($from_id, $setting['cart_info'], $backuser, 'HTML');
+        step("getresidcart", $from_id);
+        savedata("clear", "id_order", $paymentOrderId);
         return;
     }
     Editmessagetext($from_id, $message_id, "♻️ در حال ساختن سرویس شما...", null);
