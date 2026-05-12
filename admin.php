@@ -10576,7 +10576,9 @@ if (isset($update["inline_query"])) {
     }
     step("home", $from_id);
     $userdate = json_decode($user['Processing_value'], true);
-    update("user", "minpricevolume", intval($text), "id", $userdate['id_user']);
+    $minPriceVolume = intval($text);
+    update("user", "minpricevolume", $minPriceVolume, "id", $userdate['id_user']);
+    syncResellerBotMinPrices((string)$userdate['id_user'], $minPriceVolume, null);
     sendmessage($from_id, "✅ قیمت با موفقیت ذخیره گردید.", $keyboardadmin, 'HTML');
 } elseif (preg_match('/settimepricesrc_(\w+)/', $datain, $datagetr)) {
     $id_user = $datagetr[1];
@@ -10590,7 +10592,9 @@ if (isset($update["inline_query"])) {
     }
     step("home", $from_id);
     $userdate = json_decode($user['Processing_value'], true);
-    update("user", "minpricetime", intval($text), "id", $userdate['id_user']);
+    $minPriceTime = intval($text);
+    update("user", "minpricetime", $minPriceTime, "id", $userdate['id_user']);
+    syncResellerBotMinPrices((string)$userdate['id_user'], null, $minPriceTime);
     sendmessage($from_id, "✅ قیمت با موفقیت ذخیره گردید.", $keyboardadmin, 'HTML');
 }
 if ($datain == "settimecornday" && $adminrulecheck['rule'] == "administrator") {

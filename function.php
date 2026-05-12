@@ -2213,12 +2213,52 @@ function isBase64($string)
     return false;
 }
 // Returns [gigPrice, dayPrice] for an agent user.
-// If the agent has a reseller bot with minpricevolume/minpricetime set, those override pricecustomvolume/pricecustomtime.
+// Reseller-bot min prices are stored in botsaz.setting and may legitimately be zero.
+// Fall back to user.minprice* only for older rows that were never synced into botsaz.
+function syncResellerBotMinPrices(string $agent_user_id, ?int $gigPrice = null, ?int $dayPrice = null): void
+{
+    global $pdo;
+    $stmt = $pdo->prepare("SELECT id, setting FROM botsaz WHERE id_user = :uid");
+    $stmt->execute([':uid' => $agent_user_id]);
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $setting = json_decode($row['setting'] ?? '{}', true);
+        if (!is_array($setting)) {
+            $setting = [];
+        }
+        if ($gigPrice !== null) {
+            $setting['minpricevolume'] = $gigPrice;
+        }
+        if ($dayPrice !== null) {
+            $setting['minpricetime'] = $dayPrice;
+        }
+        $update = $pdo->prepare("UPDATE botsaz SET setting = :setting WHERE id = :id");
+        $update->execute([
+            ':setting' => json_encode($setting, JSON_UNESCAPED_UNICODE),
+            ':id' => $row['id'],
+        ]);
+    }
+}
+
 function agentPricePerUnit(string $agent_user_id, string $agent_type, array $panel): array
 {
     global $pdo;
     $gigPrice = intval(json_decode($panel['pricecustomvolume'] ?? '{}', true)[$agent_type] ?? 0);
     $dayPrice = intval(json_decode($panel['pricecustomtime']   ?? '{}', true)[$agent_type] ?? 0);
+    $stmt = $pdo->prepare("SELECT setting FROM botsaz WHERE id_user = :uid ORDER BY id DESC LIMIT 1");
+    $stmt->execute([':uid' => $agent_user_id]);
+    $botRow = $stmt->fetch(PDO::FETCH_ASSOC);
+    if ($botRow) {
+        $botSetting = json_decode($botRow['setting'] ?? '{}', true);
+        if (is_array($botSetting)) {
+            if (array_key_exists('minpricevolume', $botSetting) && is_numeric($botSetting['minpricevolume'])) {
+                $gigPrice = intval($botSetting['minpricevolume']);
+            }
+            if (array_key_exists('minpricetime', $botSetting) && is_numeric($botSetting['minpricetime'])) {
+                $dayPrice = intval($botSetting['minpricetime']);
+            }
+            return [$gigPrice, $dayPrice];
+        }
+    }
     $stmt = $pdo->prepare("SELECT minpricevolume, minpricetime FROM user WHERE id = :uid LIMIT 1");
     $stmt->execute([':uid' => $agent_user_id]);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
