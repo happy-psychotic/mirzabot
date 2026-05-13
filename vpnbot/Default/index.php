@@ -116,13 +116,25 @@ if ($user['bottype'] != $ApiToken) {
 if ($user['username'] != $username) {
     update("user", "username", $username, "id", $from_id);
 }
-if (($user['step'] ?? '') !== 'searchservicereseller' && preg_match('~^(?:vless|vmess|ss|trojan)://[^\s]+#(\S+)~i', trim((string)$text), $cfgMatch)) {
-    $cfgFragment = urldecode($cfgMatch[1]);
-    $cfgUsername = explode('-', $cfgFragment)[0];
-    if ($cfgUsername !== '') {
+if (($user['step'] ?? '') !== 'searchservicereseller') {
+    $directLinkUsername = '';
+    $trimmedText = trim((string)$text);
+    if (preg_match('~^(?:vless|vmess|ss|trojan)://[^\s]+#(\S+)~i', $trimmedText, $cfgMatch)) {
+        $cfgFragment = urldecode($cfgMatch[1]);
+        $directLinkUsername = explode('-', $cfgFragment)[0];
+    } elseif (strlen($trimmedText) > 32 && filter_var($trimmedText, FILTER_VALIDATE_URL)) {
+        $subInfo = outputlinksub($trimmedText);
+        if (isset($subInfo)) {
+            $subInfo = json_decode($subInfo, true);
+            if (isset($subInfo['username'])) {
+                $directLinkUsername = (string)$subInfo['username'];
+            }
+        }
+    }
+    if ($directLinkUsername !== '') {
         $stmtCfgOwn = $pdo->prepare("SELECT id_invoice FROM invoice WHERE username = :u AND id_user = :uid AND bottype = :bottype LIMIT 1");
         $stmtCfgOwn->execute([
-            ':u' => $cfgUsername,
+            ':u' => $directLinkUsername,
             ':uid' => $from_id,
             ':bottype' => $ApiToken,
         ]);
