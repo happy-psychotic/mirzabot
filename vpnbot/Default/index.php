@@ -116,6 +116,36 @@ if ($user['bottype'] != $ApiToken) {
 if ($user['username'] != $username) {
     update("user", "username", $username, "id", $from_id);
 }
+if (($user['step'] ?? '') !== 'searchservicereseller') {
+    $directLinkUsername = resellerDirectLinkUsername((string)$text);
+    if ($directLinkUsername !== '') {
+        $stmtCfgAny = $pdo->prepare("SELECT Service_location, username FROM invoice WHERE username = :u ORDER BY id_invoice DESC LIMIT 1");
+        $stmtCfgAny->execute([':u' => $directLinkUsername]);
+        $cfgAnyRow = $stmtCfgAny->fetch(PDO::FETCH_ASSOC);
+        if (!$cfgAnyRow) {
+            sendmessage($from_id, "❌ سرویسی با این نام کاربری یافت نشد.", null, 'HTML');
+        } else {
+            $DataUserCfg = $ManagePanel->DataUser($cfgAnyRow['Service_location'], $cfgAnyRow['username']);
+            if (!isset($DataUserCfg['data_limit']) && !isset($DataUserCfg['used_traffic'])) {
+                sendmessage($from_id, "❌ اطلاعات سرویس قابل دریافت نیست.", null, 'HTML');
+            } else {
+                $cfgTotal = isset($DataUserCfg['data_limit']) && $DataUserCfg['data_limit'] ? round($DataUserCfg['data_limit'] / (1024 ** 3), 2) : null;
+                $cfgUsed = isset($DataUserCfg['used_traffic']) && $DataUserCfg['used_traffic'] ? round($DataUserCfg['used_traffic'] / (1024 ** 3), 2) : 0;
+                $cfgRemain = $cfgTotal !== null ? max(0, round($cfgTotal - $cfgUsed, 2)) : null;
+                sendmessage(
+                    $from_id,
+                    "📊 اطلاعات حجم کانفیگ:\n\n" .
+                    "📦 کل حجم: <b>" . ($cfgTotal !== null ? "{$cfgTotal} گیگ" : "نامحدود") . "</b>\n" .
+                    "🔻 مصرف شده: <b>{$cfgUsed} گیگ</b>\n" .
+                    "✅ باقی‌مانده: <b>" . ($cfgRemain !== null ? "{$cfgRemain} گیگ" : "نامحدود") . "</b>",
+                    null,
+                    'HTML'
+                );
+            }
+        }
+        return;
+    }
+}
 if ($text == "/start") {
     $textstart = "✋سلام $first_name عزیز به ربات ما خوش اومدی.
 

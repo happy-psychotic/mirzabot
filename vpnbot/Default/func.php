@@ -32,6 +32,31 @@ function resellerAvailableConfigLinks(array $panel, array $dataUserOut): array
     return array_values(array_unique($links));
 }
 
+function resellerDirectLinkUsername(string $text): string
+{
+    $trimmedText = trim($text);
+    if ($trimmedText === '') {
+        return '';
+    }
+
+    if (preg_match('~^(?:vless|vmess|ss|trojan)://[^\s]+#(\S+)~i', $trimmedText, $cfgMatch)) {
+        $cfgFragment = urldecode($cfgMatch[1]);
+        return (string)explode('-', $cfgFragment)[0];
+    }
+
+    if (strlen($trimmedText) > 32 && filter_var($trimmedText, FILTER_VALIDATE_URL)) {
+        $subInfo = outputlinksub($trimmedText);
+        if (isset($subInfo)) {
+            $subInfo = json_decode($subInfo, true);
+            if (isset($subInfo['username'])) {
+                return (string)$subInfo['username'];
+            }
+        }
+    }
+
+    return '';
+}
+
 function DirectPaymentbot($order_id,$image = 'images.jpg'){
     global $pdo,$ManagePanel,$textbotlang,$keyboardextendfnished,$keyboard,$Confirm_pay,$from_id,$message_id,$datatextbot;
     $setting = select("setting", "*");
