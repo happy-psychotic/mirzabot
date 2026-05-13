@@ -116,15 +116,6 @@ if ($user['bottype'] != $ApiToken) {
 if ($user['username'] != $username) {
     update("user", "username", $username, "id", $from_id);
 }
-if (($user['step'] ?? '') !== 'searchservicereseller') {
-    $ownedInvoiceByLink = resellerFindOwnedInvoiceByDirectLink((int)$from_id, (string)$ApiToken, (string)$text);
-    if ($ownedInvoiceByLink) {
-        $datain = "product_" . $ownedInvoiceByLink;
-        $text = "x";
-        step('home', $from_id);
-        $user['step'] = 'home';
-    }
-}
 if ($text == "/start") {
     $textstart = "✋سلام $first_name عزیز به ربات ما خوش اومدی.
 
