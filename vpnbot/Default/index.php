@@ -1481,12 +1481,8 @@ $receiptTitle
             'text' => "♻️ بروزرسانی اطلاعات",
             'callback_data' => "product_"
         ),
-        'linksub' => array(
-            'text' => "🔗 دریافت کانفیگ",
-            'callback_data' => "subscriptionurl_"
-        ),
         'config' => array(
-            'text' => "📋 لینک اشتراک",
+            'text' => "📲 دریافت کانفیگ",
             'callback_data' => "config_"
         ),
         'extend' => array(
@@ -1514,10 +1510,7 @@ $receiptTitle
     if ($marzban['status_extend'] == "off_extend") {
         unset($keyboarddateservies['extend']);
     }
-    if ($marzban['sublink'] != "onsublink") {
-        unset($keyboarddateservies['linksub']);
-    }
-    if ($marzban['config'] != "onconfig") {
+    if ($marzban['sublink'] != "onsublink" && $marzban['config'] != "onconfig") {
         unset($keyboarddateservies['config']);
     }
     if (in_array($marzban['type'], ['ibsng', 'mikrotik', 'WGDashboard', 'hiddify'])) {
@@ -1601,7 +1594,7 @@ $receiptTitle
         }
     }
     Editmessagetext($from_id, $message_id, $textinfo, $keyboardsetting);
-} elseif (preg_match('/subscriptionurl_(\w+)/', $datain, $dataget)) {
+} elseif (preg_match('/config_(\w+)/', $datain, $dataget) || preg_match('/subscriptionurl_(\w+)/', $datain, $dataget)) {
     $id_invoice = $dataget[1];
     $nameloc = select("invoice", "*", "id_invoice", $id_invoice, "select");
     $isAdmin = in_array($from_id, $admin_ids_decoded) || in_array($from_id, $admin_idsmain);
@@ -1612,53 +1605,22 @@ $receiptTitle
         return;
     }
     $marzban_list_get = select("marzban_panel", "*", "name_panel", $nameloc['Service_location'], "select");
-    $subscriptionurl = $DataUserOut['subscription_url'];
     $backCallback = $isAdmin && $nameloc['id_user'] != $from_id ? "manageinvoicereseller_" . $nameloc['id_invoice'] : "product_" . $nameloc['id_invoice'];
-    $bakinfos = json_encode(['inline_keyboard' => [[['text' => $textbotlang['users']['stateus']['backinfo'], 'callback_data' => $backCallback]]]]);
-    update("user", "Processing_value", $nameloc['username'], "id", $from_id);
     if ($marzban_list_get['type'] == "WGDashboard") {
+        $subscriptionurl = $DataUserOut['subscription_url'];
+        $bakinfos = json_encode(['inline_keyboard' => [[['text' => $textbotlang['users']['stateus']['backinfo'], 'callback_data' => $backCallback]]]]);
+        update("user", "Processing_value", $nameloc['username'], "id", $from_id);
         $urlimage = "{$marzban_list_get['inboundid']}_{$nameloc['username']}.conf";
         file_put_contents($urlimage, $subscriptionurl);
         telegram('senddocument', ['chat_id' => $from_id, 'document' => new CURLFile($urlimage), 'reply_markup' => $bakinfos, 'caption' => "فایل اشتراک شما", 'parse_mode' => "HTML"]);
         unlink($urlimage);
     } else {
-        $textsub = "{$textbotlang['users']['stateus']['linksub']}\n\n<code>$subscriptionurl</code>";
-        $urlimage = runtimeTempPath("sub_qr_{$from_id}", '.png');
-        $qrCode = createqrcode($subscriptionurl);
-        file_put_contents($urlimage, $qrCode->getString());
-        addBackgroundImage($urlimage, $qrCode, $Pathfiles . 'images.jpg');
-        telegram('sendphoto', ['chat_id' => $from_id, 'photo' => new CURLFile($urlimage), 'reply_markup' => $bakinfos, 'caption' => $textsub, 'parse_mode' => "HTML"]);
-        unlink($urlimage);
-    }
-} elseif (preg_match('/config_(\w+)/', $datain, $dataget)) {
-    $id_invoice = $dataget[1];
-    $nameloc = select("invoice", "*", "id_invoice", $id_invoice, "select");
-    if (!$nameloc || $nameloc['id_user'] != $from_id) return;
-    $DataUserOut = $ManagePanel->DataUser($nameloc['Service_location'], $nameloc['username']);
-    if ($DataUserOut['status'] == "Unsuccessful") {
-        sendmessage($from_id, $textbotlang['users']['stateus']['error'], null, 'html');
-        return;
-    }
-    if (!is_array($DataUserOut['links'])) {
-        sendmessage($from_id, "❌ خطا در خواندن اطلاعات کانفیگ با پشتیبانی در ارتباط باشید.", null, 'html');
-        return;
-    }
-    deletemessage($from_id, $message_id);
-    $backKb = json_encode(['inline_keyboard' => [[['text' => $textbotlang['users']['stateus']['backinfo'], 'callback_data' => "product_{$nameloc['id_invoice']}"]]]]);
-    foreach ($DataUserOut['links'] as $i => $link) {
-        $urlimage = runtimeTempPath("config_qr_{$from_id}_{$i}", '.png');
-        $qrCode = createqrcode($link);
-        file_put_contents($urlimage, $qrCode->getString());
-        addBackgroundImage($urlimage, $qrCode, $Pathfiles . 'images.jpg');
-        $isLast = ($i === array_key_last($DataUserOut['links']));
-        telegram('sendphoto', [
-            'chat_id'      => $from_id,
-            'photo'        => new CURLFile($urlimage),
-            'caption'      => formatConfigLinksForDelivery([$link]),
-            'parse_mode'   => "HTML",
-            'reply_markup' => $isLast ? $backKb : null,
-        ]);
-        unlink($urlimage);
+        $configLinks = resellerAvailableConfigLinks($marzban_list_get, $DataUserOut);
+        if (count($configLinks) === 0) {
+            sendmessage($from_id, "❌ هیچ کانفیگی برای این سرویس یافت نشد.", null, 'html');
+            return;
+        }
+        Editmessagetext($from_id, $message_id, "📲 یکی از کانفیگ‌های زیر را انتخاب کنید.", keyboard_config($configLinks, $nameloc['id_invoice'], true));
     }
 } elseif (preg_match('/adminconfig_(\w+)/', $datain, $dataget)) {
     $id_invoice = $dataget[1];
@@ -1701,22 +1663,33 @@ $receiptTitle
         sendmessage($from_id, $textbotlang['users']['stateus']['error'], null, 'html');
         return;
     }
+    $marzban_list_get = select("marzban_panel", "*", "name_panel", $nameloc['Service_location'], "select");
+    $configLinks = resellerAvailableConfigLinks($marzban_list_get, $DataUserOut);
+    if (count($configLinks) === 0) {
+        sendmessage($from_id, "❌ هیچ کانفیگی برای این سرویس یافت نشد.", null, 'html');
+        return;
+    }
     if ($dataget[2] == "1520") {
-        for ($i = 0; $i < count($DataUserOut['links']); ++$i) {
+        for ($i = 0; $i < count($configLinks); ++$i) {
             $urlimage = runtimeTempPath("config_qr_{$from_id}_{$i}", '.png');
-            $qrCode = createqrcode($DataUserOut['links'][$i]);
+            $qrCode = createqrcode($configLinks[$i]);
             file_put_contents($urlimage, $qrCode->getString());
             addBackgroundImage($urlimage, $qrCode, $Pathfiles . 'images.jpg');
-            telegram('sendphoto', ['chat_id' => $from_id, 'photo' => new CURLFile($urlimage), 'caption' => formatConfigLinksForDelivery([$DataUserOut['links'][$i]]), 'parse_mode' => "HTML"]);
+            $isLast = ($i === array_key_last($configLinks));
+            telegram('sendphoto', ['chat_id' => $from_id, 'photo' => new CURLFile($urlimage), 'caption' => formatConfigLinksForDelivery([$configLinks[$i]]), 'parse_mode' => "HTML", 'reply_markup' => $isLast ? $bakinfos : null]);
             unlink($urlimage);
         }
         return;
     }
+    if (!isset($configLinks[$dataget[2]])) {
+        sendmessage($from_id, "❌ کانفیگ انتخاب شده یافت نشد.", null, 'html');
+        return;
+    }
     $urlimage = runtimeTempPath("config_qr_{$from_id}", '.png');
-    $qrCode = createqrcode($DataUserOut['links'][$dataget[2]]);
+    $qrCode = createqrcode($configLinks[$dataget[2]]);
     file_put_contents($urlimage, $qrCode->getString());
     addBackgroundImage($urlimage, $qrCode, $Pathfiles . 'images.jpg');
-    telegram('sendphoto', ['chat_id' => $from_id, 'photo' => new CURLFile($urlimage), 'caption' => formatConfigLinksForDelivery([$DataUserOut['links'][$dataget[2]]]), 'parse_mode' => "HTML"]);
+    telegram('sendphoto', ['chat_id' => $from_id, 'photo' => new CURLFile($urlimage), 'caption' => formatConfigLinksForDelivery([$configLinks[$dataget[2]]]), 'parse_mode' => "HTML", 'reply_markup' => $bakinfos]);
     unlink($urlimage);
 } elseif (preg_match('/changestatus_(\w+)/', $datain, $dataget)) {
     $id_invoice = $dataget[1];

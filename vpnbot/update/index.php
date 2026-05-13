@@ -1470,6 +1470,14 @@ $receiptTitle
     $Percent = round($Percent, 2);
     $keyboardsetting = ['inline_keyboard' => []];
     $keyboarddateservies = array(
+        'updateinfo' => array(
+            'text' => "♻️ بروزرسانی اطلاعات",
+            'callback_data' => "product_"
+        ),
+        'config' => array(
+            'text' => "📲 دریافت کانفیگ",
+            'callback_data' => "config_"
+        ),
         'extend' => array(
             'text' => $textbotlang['users']['extend']['title'],
             'callback_data' => "extend_"
@@ -1478,15 +1486,30 @@ $receiptTitle
             'text' => $textbotlang['users']['changelink']['btntitle'],
             'callback_data' => "changelink_"
         ),
+        'renameservice' => array(
+            'text' => "✏️ تغییر نام سرویس",
+            'callback_data' => "renameservice_"
+        ),
+        'changestatus' => array(
+            'text' => $DataUserOut['status'] == "active" ? "❌ خاموش کردن اکانت" : "💡 روشن کردن اکانت",
+            'callback_data' => "changestatus_"
+        ),
     );
     if ($marzban['status_extend'] == "off_extend") {
         unset($keyboarddateservies['extend']);
+    }
+    if ($marzban['sublink'] != "onsublink" && $marzban['config'] != "onconfig") {
+        unset($keyboarddateservies['config']);
+    }
+    if (in_array($marzban['type'], ['ibsng', 'mikrotik', 'WGDashboard', 'hiddify'])) {
+        unset($keyboarddateservies['changestatus']);
+        unset($keyboarddateservies['changelink']);
     }
     if (count($keyboarddateservies) != 0) {
         $tempArrayservices = [];
         foreach ($keyboarddateservies as $keyboardtextservice) {
             $tempArrayservices[] = ['text' => $keyboardtextservice['text'], 'callback_data' => $keyboardtextservice['callback_data'] . $username];
-            if (count($tempArrayservices) == 2) {
+            if (count($tempArrayservices) == 2 || $keyboardtextservice['text'] == "♻️ بروزرسانی اطلاعات") {
                 $keyboardsetting['inline_keyboard'][] = $tempArrayservices;
                 $tempArrayservices = [];
             }
@@ -1507,19 +1530,13 @@ $receiptTitle
         Editmessagetext($from_id, $message_id, $textinfo, $keyboardsetting);
         return;
     }
-    $output = "";
-    $config = "";
-    if ($marzban['sublink'] == "onsublink") {
-        $output = $DataUserOut['subscription_url'];
-    }
-    if ($marzban['config'] == "onconfig") {
-        $config = $DataUserOut['links'][0];
-    }
     #-----------------------------#
     $keyboardsetting = json_encode($keyboardsetting);
+    $noteRaw = $nameloc['note'] ?? '';
+    if (preg_match('/__name:(.+)/', $noteRaw, $nm)) { $displayName = $nm[1]; } else { $displayName = $DataUserOut['username']; }
     if (!in_array($status, ["active", "on_hold", "disabled", "Unknown"])) {
         $textinfo = "وضعیت سرویس : <b>$status_var</b>
-نام کاربری سرویس : {$DataUserOut['username']}
+نام سرویس : $displayName
 موقعیت سرویس :{$nameloc['Service_location']}
 مدت زمان سرویس :{$nameloc['Service_time']} روز
 
@@ -1530,15 +1547,11 @@ $receiptTitle
 💢 حجم باقی مانده : $RemainingVolume ($Percent%)
 
 📅 فعال تا تاریخ : $expirationDate ($day)
-
-<code>$config</code>
-
-<code>$output</code>
 ";
     } else {
         if ($DataUserOut['sub_updated_at'] !== null) {
             $textinfo = "وضعیت سرویس : $status_var
-👤 نام سرویس : {$DataUserOut['username']}
+👤 نام سرویس : $displayName
 🌍 موقعیت سرویس :{$nameloc['Service_location']}
 🖇 کد سرویس:{$nameloc['id_invoice']}
 
@@ -1553,13 +1566,10 @@ $receiptTitle
 📶 اخرین زمان اتصال  : $lastonline
 🔄 اخرین زمان آپدیت لینک اشتراک  : $lastupdate
 #️⃣ کلاینت متصل شده :<code>{$DataUserOut['sub_last_user_agent']}</code>
-
-$config
-$output
 ";
         } else {
             $textinfo = "وضعیت سرویس : $status_var
-👤 نام سرویس : {$DataUserOut['username']}
+👤 نام سرویس : $displayName
 🌍 موقعیت سرویس :{$nameloc['Service_location']}
 🖇 کد سرویس:{$nameloc['id_invoice']}
 
@@ -1570,10 +1580,6 @@ $output
 📅 فعال تا تاریخ : $expirationDate ($day)
 
 📶 اخرین زمان اتصال شما : $lastonline
-
-<code>$config</code>
-
-<code>$output</code>
 ";
         }
     }
@@ -1946,7 +1952,7 @@ $output
         ]);
         unlink($urlimage);
     }
-} elseif (preg_match('/subscriptionurl_(\w+)/', $datain, $dataget)) {
+} elseif (preg_match('/config_(\w+)/', $datain, $dataget) || preg_match('/subscriptionurl_(\w+)/', $datain, $dataget)) {
     $id_invoice = $dataget[1];
     $nameloc = select("invoice", "*", "id_invoice", $id_invoice, "select");
     $isAdmin = in_array($from_id, $admin_ids) || in_array($from_id, $admin_idsmain);
@@ -1957,22 +1963,21 @@ $output
         return;
     }
     $marzban_list_get = select("marzban_panel", "*", "name_panel", $nameloc['Service_location'], "select");
-    $subscriptionurl = $DataUserOut['subscription_url'];
     $backCallback = $isAdmin && $nameloc['id_user'] != $from_id ? "manageinvoicereseller_" . $nameloc['id_invoice'] : "product_" . $nameloc['id_invoice'];
-    $bakinfos = json_encode(['inline_keyboard' => [[['text' => $textbotlang['users']['stateus']['backinfo'], 'callback_data' => $backCallback]]]]);
     if ($marzban_list_get['type'] == "WGDashboard") {
+        $subscriptionurl = $DataUserOut['subscription_url'];
+        $bakinfos = json_encode(['inline_keyboard' => [[['text' => $textbotlang['users']['stateus']['backinfo'], 'callback_data' => $backCallback]]]]);
         $urlimage = "{$marzban_list_get['inboundid']}_{$nameloc['username']}.conf";
         file_put_contents($urlimage, $subscriptionurl);
         telegram('senddocument', ['chat_id' => $from_id, 'document' => new CURLFile($urlimage), 'reply_markup' => $bakinfos, 'caption' => "فایل اشتراک شما", 'parse_mode' => "HTML"]);
         unlink($urlimage);
     } else {
-        $textsub = "{$textbotlang['users']['stateus']['linksub']}\n\n<code>$subscriptionurl</code>";
-        $urlimage = runtimeTempPath("sub_qr_{$from_id}", '.png');
-        $qrCode = createqrcode($subscriptionurl);
-        file_put_contents($urlimage, $qrCode->getString());
-        addBackgroundImage($urlimage, $qrCode, $Pathfiles . 'images.jpg');
-        telegram('sendphoto', ['chat_id' => $from_id, 'photo' => new CURLFile($urlimage), 'reply_markup' => $bakinfos, 'caption' => $textsub, 'parse_mode' => "HTML"]);
-        unlink($urlimage);
+        $configLinks = resellerAvailableConfigLinks($marzban_list_get, $DataUserOut);
+        if (count($configLinks) === 0) {
+            sendmessage($from_id, "❌ هیچ کانفیگی برای این سرویس یافت نشد.", null, 'html');
+            return;
+        }
+        Editmessagetext($from_id, $message_id, "📲 یکی از کانفیگ‌های زیر را انتخاب کنید.", keyboard_config($configLinks, $nameloc['id_invoice'], true));
     }
 } elseif (preg_match('/renameservice_(\w+)/', $datain, $dataget)) {
     $id_invoice = $dataget[1];
@@ -2010,6 +2015,44 @@ $output
     update("invoice", "note", $metaPrefix . '__name:' . $text, "id_invoice", $id_invoice);
     step("home", $from_id);
     sendmessage($from_id, "✅ نام سرویس به <code>$text</code> تغییر یافت.", $backinfoss, 'html');
+} elseif (preg_match('/configget_(.*)_(.*)/', $datain, $dataget)) {
+    $id_invoice = $dataget[1];
+    $nameloc = select("invoice", "*", "id_invoice", $id_invoice, "select");
+    if (!$nameloc || $nameloc['id_user'] != $from_id) return;
+    $marzban_list_get = select("marzban_panel", "*", "name_panel", $nameloc['Service_location'], "select");
+    $DataUserOut = $ManagePanel->DataUser($nameloc['Service_location'], $nameloc['username']);
+    $bakinfos = json_encode(['inline_keyboard' => [[['text' => $textbotlang['users']['stateus']['backinfo'], 'callback_data' => "product_" . $nameloc['id_invoice']]]]]);
+    if ($DataUserOut['status'] == "Unsuccessful") {
+        sendmessage($from_id, $textbotlang['users']['stateus']['error'], null, 'html');
+        return;
+    }
+    $configLinks = resellerAvailableConfigLinks($marzban_list_get, $DataUserOut);
+    if (count($configLinks) === 0) {
+        sendmessage($from_id, "❌ هیچ کانفیگی برای این سرویس یافت نشد.", null, 'html');
+        return;
+    }
+    if ($dataget[2] == "1520") {
+        for ($i = 0; $i < count($configLinks); ++$i) {
+            $urlimage = runtimeTempPath("config_qr_{$from_id}_{$i}", '.png');
+            $qrCode = createqrcode($configLinks[$i]);
+            file_put_contents($urlimage, $qrCode->getString());
+            addBackgroundImage($urlimage, $qrCode, $Pathfiles . 'images.jpg');
+            $isLast = ($i === array_key_last($configLinks));
+            telegram('sendphoto', ['chat_id' => $from_id, 'photo' => new CURLFile($urlimage), 'caption' => formatConfigLinksForDelivery([$configLinks[$i]]), 'parse_mode' => "HTML", 'reply_markup' => $isLast ? $bakinfos : null]);
+            unlink($urlimage);
+        }
+        return;
+    }
+    if (!isset($configLinks[$dataget[2]])) {
+        sendmessage($from_id, "❌ کانفیگ انتخاب شده یافت نشد.", null, 'html');
+        return;
+    }
+    $urlimage = runtimeTempPath("config_qr_{$from_id}", '.png');
+    $qrCode = createqrcode($configLinks[$dataget[2]]);
+    file_put_contents($urlimage, $qrCode->getString());
+    addBackgroundImage($urlimage, $qrCode, $Pathfiles . 'images.jpg');
+    telegram('sendphoto', ['chat_id' => $from_id, 'photo' => new CURLFile($urlimage), 'caption' => formatConfigLinksForDelivery([$configLinks[$dataget[2]]]), 'parse_mode' => "HTML", 'reply_markup' => $bakinfos]);
+    unlink($urlimage);
 } elseif (preg_match('/changelink_(\w+)/', $datain, $dataget)) {
     $id_invoice = $dataget[1];
     $nameloc = select("invoice", "*", "id_invoice", $id_invoice, "select");

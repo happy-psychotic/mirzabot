@@ -259,6 +259,13 @@ function keyboard_config($config_split, $id_invoice, $back_active = true) {
         $split_config = explode("://", $config, 2);
         $type_prtocol = $split_config[0] ?? '';
         $split_payload = $split_config[1] ?? $config;
+        if (in_array(strtolower($type_prtocol), ['http', 'https'], true)) {
+            $keyboard_config['inline_keyboard'][] = [
+                ['text' => "دریافت کانفیگ", 'callback_data' => "configget_{$id_invoice}_$i"],
+                ['text' => "SUB LINK", 'callback_data' => "none"],
+            ];
+            continue;
+        }
         if (isBase64($split_payload)) {
             $split_payload = base64_decode($split_payload);
         }

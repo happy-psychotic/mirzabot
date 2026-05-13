@@ -15,6 +15,23 @@ function readJsonFileIfExists($path, $default = [])
     return is_array($decoded) ? $decoded : $default;
 }
 
+function resellerAvailableConfigLinks(array $panel, array $dataUserOut): array
+{
+    $links = [];
+    if (($panel['sublink'] ?? '') === 'onsublink' && !empty($dataUserOut['subscription_url'])) {
+        $links[] = (string)$dataUserOut['subscription_url'];
+    }
+    if (($panel['config'] ?? '') === 'onconfig' && isset($dataUserOut['links']) && is_array($dataUserOut['links'])) {
+        foreach ($dataUserOut['links'] as $link) {
+            $link = trim((string)$link);
+            if ($link !== '') {
+                $links[] = $link;
+            }
+        }
+    }
+    return array_values(array_unique($links));
+}
+
 function DirectPaymentbot($order_id,$image = 'images.jpg'){
     global $pdo,$ManagePanel,$textbotlang,$keyboardextendfnished,$keyboard,$Confirm_pay,$from_id,$message_id,$datatextbot;
     $setting = select("setting", "*");
