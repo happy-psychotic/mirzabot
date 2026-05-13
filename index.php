@@ -884,6 +884,22 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
     }
     if ($marzban['type'] == "Manualsale") {
         $userinfo = select("manualsell", "*", "username", $nameloc['username'], "select");
+        if ($user['agent'] == 'n' && intval($nameloc['agent_customer_price']) > 0) {
+            $latestAgentReceipt = getLatestAgentReceiptReport($nameloc['id_invoice']);
+            $agentReceiptButton = ($latestAgentReceipt && in_array($latestAgentReceipt['payment_Status'], ['waiting', 'paid']))
+                ? ['text' => $latestAgentReceipt['payment_Status'] == 'paid' ? "🟢 رسید تایید شد" : "🟢 رسید ارسال شد", 'callback_data' => 'noop']
+                : ['text' => "🔴 ارسال رسید", 'callback_data' => "agentreceipt_{$nameloc['id_invoice']}"];
+            $keyboardsetting = json_encode([
+                'inline_keyboard' => [
+                    [
+                        $agentReceiptButton,
+                    ],
+                    [
+                        ['text' => $textbotlang['users']['stateus']['backlist'], 'callback_data' => 'backorder'],
+                    ]
+                ]
+            ]);
+        }
         $textinfo = "وضعیت سرویس : <b>$status_var</b>
 نام کاربری سرویس : {$DataUserOut['username']}
 📎 کد پیگیری سرویس : {$nameloc['id_invoice']}
@@ -1110,6 +1126,13 @@ $nameconfig";
         }
         if (count($tempArray) > 0) {
             $keyboardsetting['inline_keyboard'][] = $tempArray;
+        }
+        if ($user['agent'] == 'n' && intval($nameloc['agent_customer_price']) > 0) {
+            $latestAgentReceipt = getLatestAgentReceiptReport($nameloc['id_invoice']);
+            $agentReceiptButton = ($latestAgentReceipt && in_array($latestAgentReceipt['payment_Status'], ['waiting', 'paid']))
+                ? ['text' => $latestAgentReceipt['payment_Status'] == 'paid' ? "🟢 رسید تایید شد" : "🟢 رسید ارسال شد", 'callback_data' => 'noop']
+                : ['text' => "🔴 ارسال رسید", 'callback_data' => "agentreceipt_{$nameloc['id_invoice']}"];
+            $keyboardsetting['inline_keyboard'][] = [$agentReceiptButton];
         }
         $keyboardsetting['inline_keyboard'][] = [['text' => $textbotlang['users']['stateus']['backlist'], 'callback_data' => 'backorder']];
         $keyboardsetting = json_encode($keyboardsetting);
@@ -4204,8 +4227,11 @@ $textinvite
     $stmt->execute();
     $stmt->close();
     $agent_profit = intval($userdate['agent_profit'] ?? -1);
-    // If agent entered a customer price (profit >= 0), skip balance check entirely
-    if ($priceproduct > $user['Balance'] && $user['agent'] != "n2" && intval($priceproduct) != 0 && $agent_profit < 0) {
+    if ($user['agent'] == 'n' && $agent_profit >= 0) {
+        update("invoice", "agent_customer_price", $priceproduct + $agent_profit, "id_invoice", $randomString);
+        update("invoice", "agent_profit", $agent_profit, "id_invoice", $randomString);
+    }
+    if ($priceproduct > $user['Balance'] && $user['agent'] != "n2" && intval($priceproduct) != 0) {
         $marzbandirectpay = select("shopSetting", "*", "Namevalue", "statusdirectpabuy", "select")['value'];
         $Balance_prim = $priceproduct - $user['Balance'];
         if ($Balance_prim <= 1)
@@ -4339,15 +4365,7 @@ $textinvite
         update("invoice", "user_info", $dataoutput['subscription_url'], "id_invoice", $randomString);
     }
     sendMessageService($marzban_list_get, $dataoutput['configs'], $output_config_link, $dataoutput['username'], $Shoppinginfo, $textcreatuser, $randomString);
-    if ($user['agent'] == 'n' && $agent_profit >= 0) {
-        // Agent entered a customer price: don't deduct cost, only add profit
-        if ($agent_profit > 0) {
-            $current_balance = intval(select("user", "Balance", "id", $from_id, "select")['Balance']);
-            update("user", "Balance", $current_balance + $agent_profit, "id", $from_id);
-            sendmessage($from_id, "💵 سود فروش <b>" . number_format($agent_profit) . "</b> تومان به کیف پول شما اضافه شد.", null, 'HTML');
-        }
-    } elseif (intval($priceproduct) != 0) {
-        // Normal flow: deduct cost from wallet
+    if (intval($priceproduct) != 0) {
         $Balance_prim = $user['Balance'] - $priceproduct;
         update("user", "Balance", $Balance_prim, "id", $from_id);
     }
@@ -4449,7 +4467,7 @@ $textinvite
         $customerPriceForReport = $priceproduct + $agent_profit;
         $agent_profit_report = "\n▫️قیمت مشتری : " . number_format($customerPriceForReport) . " تومان" .
                                "\n▫️سود نماینده : " . number_format($agent_profit) . " تومان" .
-                               "\n▫️هزینه نماینده : رایگان (بدون کسر از کیف پول)";
+                               "\n▫️مبلغ کسر شده از کیف پول نماینده : " . number_format($priceproduct) . " تومان";
     }
     $text_report = "📣 جزئیات ساخت اکانت در ربات شما ثبت شد .
 
@@ -4481,61 +4499,117 @@ $textonebuy
         ]);
     }
     update("user", "Processing_value_four", "none", "id", $from_id);
-    // If agent used the profit flow, ask them to send a receipt photo
     if ($user['agent'] == 'n' && $agent_profit >= 0) {
-        $receiptData = json_encode([
-            'invoice_id'    => $randomString,
-            'username_ac'   => $username_ac,
-            'name_product'  => $info_product['name_product'],
-            'volume'        => $info_product['Volume_constraint'],
-            'days'          => $info_product['Service_time'],
-            'agent_cost'    => $priceproduct,
-            'profit'        => $agent_profit,
-            'customer_price' => $priceproduct + $agent_profit,
+        $receiptKeyboard = json_encode([
+            'inline_keyboard' => [
+                [
+                    ['text' => "🔴 ارسال رسید", 'callback_data' => "agentreceipt_{$randomString}"],
+                ],
+                [
+                    ['text' => "📦 سفارش من", 'callback_data' => "product_{$randomString}"],
+                ]
+            ]
         ]);
-        update("user", "Processing_value", $receiptData, "id", $from_id);
-        sendmessage($from_id, "🖼 تصویر رسید پرداخت مشتری را ارسال کنید:", $backuser, 'HTML');
-        step('agent_profit_receipt', $from_id);
+        sendmessage($from_id, "💰 مبلغ پایه این سفارش از کیف پول شما کسر شد.
+
+بعد از ارسال رسید و تایید ادمین، مبلغ پایه به همراه سود این سفارش به کیف پول شما برمی‌گردد.", $receiptKeyboard, 'HTML');
+        step('home', $from_id);
     } else {
         step('home', $from_id);
     }
-} elseif ($user['step'] == 'agent_profit_receipt') {
-    step('home', $from_id);
-    if (!$photo) {
-        sendmessage($from_id, "❌ لطفاً یک تصویر ارسال کنید.", $backuser, 'HTML');
+} elseif (preg_match('/^agentreceipt_(\w+)/', $datain, $dataget)) {
+    $agentInvoice = select("invoice", "*", "id_invoice", $dataget[1], "select");
+    if ($user['agent'] != 'n' || !$agentInvoice || $agentInvoice['id_user'] != $from_id) {
+        sendmessage($from_id, "❌ امکان ارسال رسید برای این سفارش وجود ندارد.", null, 'HTML');
         return;
     }
-    $rd = json_decode($user['Processing_value'], true);
+    $latestAgentReceipt = getLatestAgentReceiptReport($agentInvoice['id_invoice']);
+    if ($latestAgentReceipt && in_array($latestAgentReceipt['payment_Status'], ['waiting', 'paid'])) {
+        sendmessage($from_id, "✅ رسید این سفارش قبلاً ارسال شده است.", null, 'HTML');
+        return;
+    }
+    update("user", "Processing_value", $agentInvoice['id_invoice'], "id", $from_id);
+    step('agent_profit_receipt', $from_id);
+    sendmessage($from_id, "🖼 تصویر رسید این سفارش را ارسال کنید.", $backuser, 'HTML');
+} elseif ($user['step'] == 'agent_profit_receipt') {
+    if (!$photo || isset($update['message']['media_group_id'])) {
+        sendmessage($from_id, "❌ فقط یک تصویر رسید ارسال کنید.", $backuser, 'HTML');
+        return;
+    }
+    step('home', $from_id);
+    $agentInvoice = select("invoice", "*", "id_invoice", $user['Processing_value'], "select");
+    if (!$agentInvoice || $agentInvoice['id_user'] != $from_id || $user['agent'] != 'n') {
+        sendmessage($from_id, "❌ اطلاعات سفارش یافت نشد. دوباره تلاش کنید.", $keyboard, 'HTML');
+        return;
+    }
+    $latestAgentReceipt = getLatestAgentReceiptReport($agentInvoice['id_invoice']);
+    if ($latestAgentReceipt && in_array($latestAgentReceipt['payment_Status'], ['waiting', 'paid'])) {
+        sendmessage($from_id, "✅ رسید این سفارش قبلاً ارسال شده است.", $keyboard, 'HTML');
+        return;
+    }
+    $agentProfit = intval($agentInvoice['agent_profit']);
+    $customerPrice = intval($agentInvoice['agent_customer_price']);
+    if ($customerPrice <= 0) {
+        sendmessage($from_id, "❌ این سفارش امکان ارسال رسید نماینده ندارد.", $keyboard, 'HTML');
+        return;
+    }
+    $paymentOrderId = bin2hex(random_bytes(5));
+    $paymentTime = date('Y/m/d H:i:s');
+    $paymentInvoiceKey = agentReceiptInvoiceKey($agentInvoice['id_invoice']);
+    $stmt = $connect->prepare("INSERT INTO Payment_report (id_user,id_order,time,at_updated,price,payment_Status,Payment_Method,id_invoice,dec_not_confirmed) VALUES (?,?,?,?,?,?,?,?,?)");
+    $paymentStatus = "waiting";
+    $paymentMethod = "cart to cart";
+    $description = "agent_receipt";
+    $stmt->bind_param("sssssssss", $from_id, $paymentOrderId, $paymentTime, $paymentTime, $customerPrice, $paymentStatus, $paymentMethod, $paymentInvoiceKey, $description);
+    $stmt->execute();
+    $stmt->close();
     $timejalali = jdate('Y/m/d H:i:s');
-    $caption = "🧾 <b>رسید فروش نماینده</b>
+    $agentReceiptKeyboard = json_encode([
+        'inline_keyboard' => [
+            [
+                ['text' => $textbotlang['users']['Balance']['Confirmpaying'], 'callback_data' => "Confirm_pay_{$paymentOrderId}"],
+                ['text' => $textbotlang['users']['Balance']['reject_pay'], 'callback_data' => "reject_pay_{$paymentOrderId}"],
+            ],
+            [
+                ['text' => "⚙️ اطلاعات سفارش", 'callback_data' => "manageinvoice_{$agentInvoice['id_invoice']}"],
+            ]
+        ]
+    ]);
+    $agentReceiptCaption = "🧾 <b>رسید سفارش نماینده</b>
 
 👤 نماینده: <a href=\"tg://user?id={$from_id}\">{$from_id}</a> @{$username}
-🔑 نام سرویس: <code>{$rd['username_ac']}</code>
-📦 محصول: {$rd['name_product']}
-🔋 حجم: {$rd['volume']} GB — ⌛️ زمان: {$rd['days']} روز
-💰 قیمت مشتری: <b>" . number_format($rd['customer_price']) . "</b> تومان
-💵 سود نماینده: <b>" . number_format($rd['profit']) . "</b> تومان
-🕐 زمان: {$timejalali}";
-    sendmessage($from_id, "✅ رسید ثبت شد.", $keyboard, 'HTML');
+🛒 کد سفارش: <code>{$agentInvoice['id_invoice']}</code>
+🔑 نام سرویس: <code>{$agentInvoice['username']}</code>
+📦 محصول: {$agentInvoice['name_product']}
+🔋 حجم: {$agentInvoice['Volume']} GB
+⌛️ زمان: {$agentInvoice['Service_time']} روز
+💰 مبلغ مشتری: <b>" . number_format($customerPrice) . "</b> تومان
+💵 سود نماینده: <b>" . number_format($agentProfit) . "</b> تومان
+💳 مبلغ قابل برگشت به کیف پول: <b>" . number_format($customerPrice) . "</b> تومان
+🕐 زمان ارسال رسید: {$timejalali}";
     foreach ($admin_ids as $id_admin) {
         $adminrulecheck = select("admin", "*", "id_admin", $id_admin, "select");
-        if ($adminrulecheck['rule'] == "support") continue;
+        if ($adminrulecheck['rule'] == "support") {
+            continue;
+        }
         telegram('sendphoto', [
-            'chat_id'    => $id_admin,
-            'photo'      => $photoid,
-            'caption'    => $caption,
+            'chat_id' => $id_admin,
+            'photo' => $photoid,
+            'caption' => "🧾 رسید سفارش نماینده",
             'parse_mode' => "HTML",
         ]);
+        sendmessage($id_admin, $agentReceiptCaption, $agentReceiptKeyboard, 'HTML');
     }
     if (strlen($setting['Channel_Report']) > 0) {
         telegram('sendphoto', [
-            'chat_id'            => $setting['Channel_Report'],
-            'message_thread_id'  => $buyreport,
-            'photo'              => $photoid,
-            'caption'            => $caption,
-            'parse_mode'         => "HTML",
+            'chat_id' => $setting['Channel_Report'],
+            'message_thread_id' => $buyreport,
+            'photo' => $photoid,
+            'caption' => $agentReceiptCaption,
+            'parse_mode' => "HTML",
         ]);
     }
+    sendmessage($from_id, "✅ رسید سفارش ارسال شد. بعد از تایید ادمین، مبلغ پایه و سود این سفارش به کیف پول شما برمی‌گردد.", $keyboard, 'HTML');
 } elseif ($datain == "aptdc") {
     sendmessage($from_id, $textbotlang['users']['Discount']['getcodesell'], $backuser, 'HTML');
     step('getcodesellDiscount', $from_id);

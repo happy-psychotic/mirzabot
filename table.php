@@ -497,6 +497,8 @@ try {
         user_info TEXT NULL,
         bottype varchar(200) NULL,
         refral varchar(100) NULL,
+        agent_customer_price varchar(200) NULL,
+        agent_profit varchar(200) NULL,
         time_cron varchar(100) NULL,
         notifctions TEXT NOT NULL,
         Status varchar(200) NULL)
@@ -525,6 +527,14 @@ try {
         $Check_filde = $connect->query("SHOW COLUMNS FROM invoice LIKE 'refral'");
         if (mysqli_num_rows($Check_filde) != 1) {
             $result = $connect->query("ALTER TABLE invoice ADD refral VARCHAR(100)");
+        }
+        $Check_filde = $connect->query("SHOW COLUMNS FROM invoice LIKE 'agent_customer_price'");
+        if (mysqli_num_rows($Check_filde) != 1) {
+            $result = $connect->query("ALTER TABLE invoice ADD agent_customer_price VARCHAR(200)");
+        }
+        $Check_filde = $connect->query("SHOW COLUMNS FROM invoice LIKE 'agent_profit'");
+        if (mysqli_num_rows($Check_filde) != 1) {
+            $result = $connect->query("ALTER TABLE invoice ADD agent_profit VARCHAR(200)");
         }
         $Check_filde = $connect->query("SHOW COLUMNS FROM invoice LIKE 'bottype'");
         if (mysqli_num_rows($Check_filde) != 1) {

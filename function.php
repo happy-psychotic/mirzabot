@@ -1591,6 +1591,20 @@ $textonebuy
         update("Payment_report", "payment_Status", "paid", "id_order", $Payment_report['id_order']);
         $Payment_report['price'] = number_format($Payment_report['price'], 0);
         $format_price_cart = $Payment_report['price'];
+        if (isAgentReceiptPaymentReport($Payment_report)) {
+            $agentInvoiceId = explode('|', $Payment_report['id_invoice'], 2)[1] ?? '';
+            $agentInvoice = $agentInvoiceId !== '' ? select("invoice", "*", "id_invoice", $agentInvoiceId, "select") : false;
+            $receiptApproveText = "✅ رسید سفارش شما تایید شد.
+
+🛒 کد سفارش: <code>{$agentInvoiceId}</code>
+💸 مبلغ برگشتی به کیف پول: {$Payment_report['price']} تومان";
+            if ($agentInvoice) {
+                $receiptApproveText .= "
+👤 نام کاربری سرویس: <code>{$agentInvoice['username']}</code>";
+            }
+            sendmessage($Payment_report['id_user'], $receiptApproveText, null, 'HTML');
+            return;
+        }
         if ($Payment_report['Payment_Method'] == "cart to cart" or $Payment_report['Payment_Method'] == "arze digital offline") {
             $textconfrom = "⭕️ یک پرداخت جدید انجام شده است
         افزایش موجودی.
@@ -2282,6 +2296,27 @@ function agentProductPrice(string $agent_user_id, string $agent_type, array $pan
         return ($vol * $gigPrice) + ($days * $dayPrice);
     }
     return intval($product['price_product']);
+}
+
+function agentReceiptInvoiceKey(string $invoiceId): string
+{
+    return 'agentprofit|' . $invoiceId;
+}
+
+function getLatestAgentReceiptReport(string $invoiceId)
+{
+    global $pdo;
+    $stmt = $pdo->prepare("SELECT * FROM Payment_report WHERE id_invoice = :id_invoice ORDER BY id DESC LIMIT 1");
+    $stmt->execute([
+        ':id_invoice' => agentReceiptInvoiceKey($invoiceId),
+    ]);
+    $report = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $report ?: false;
+}
+
+function isAgentReceiptPaymentReport(array $paymentReport): bool
+{
+    return strpos((string)($paymentReport['id_invoice'] ?? ''), 'agentprofit|') === 0;
 }
 
 function formatTelegramCode($value)

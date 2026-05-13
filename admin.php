@@ -3431,15 +3431,36 @@ $caption";
         return;
     }
     DirectPayment($order_id);
-    $pricecashback = select("PaySetting", "ValuePay", "NamePay", "chashbackcart", "select")['ValuePay'];
     $Balance_id = select("user", "*", "id", $Payment_report['id_user'], "select");
-    if ($pricecashback != "0") {
-        $result = ($Payment_report['price'] * $pricecashback) / 100;
-        $Balance_confrim = intval($Balance_id['Balance']) + $result;
-        update("user", "Balance", $Balance_confrim, "id", $Balance_id['id']);
-        $pricecashback = number_format($pricecashback);
-        $text_report = "🎁 کاربر عزیز مبلغ $result تومان به عنوان هدیه واریز به حساب شما واریز گردید.";
-        sendmessage($Balance_id['id'], $text_report, null, 'HTML');
+    if (!isAgentReceiptPaymentReport($Payment_report)) {
+        $pricecashback = select("PaySetting", "ValuePay", "NamePay", "chashbackcart", "select")['ValuePay'];
+        if ($pricecashback != "0") {
+            $result = ($Payment_report['price'] * $pricecashback) / 100;
+            $Balance_confrim = intval($Balance_id['Balance']) + $result;
+            update("user", "Balance", $Balance_confrim, "id", $Balance_id['id']);
+            $pricecashback = number_format($pricecashback);
+            $text_report = "🎁 کاربر عزیز مبلغ $result تومان به عنوان هدیه واریز به حساب شما واریز گردید.";
+            sendmessage($Balance_id['id'], $text_report, null, 'HTML');
+        }
+    } else {
+        $agentInvoiceId = explode('|', $Payment_report['id_invoice'], 2)[1] ?? '';
+        $Confirm_pay = json_encode([
+            'inline_keyboard' => [
+                [
+                    ['text' => "✅ تایید شده", 'callback_data' => "confirmpaid"],
+                ],
+                [
+                    ['text' => "⚙️ مدیریت سفارش", 'callback_data' => "manageinvoice_" . $agentInvoiceId],
+                ]
+            ]
+        ]);
+        $textconfrom = "✅ رسید نماینده تایید شد
+👤 شناسه کاربر: <code>{$Balance_id['id']}</code>
+🛒 کد سفارش: <code>{$agentInvoiceId}</code>
+🧾 کد پیگیری رسید: {$Payment_report['id_order']}
+⚜️ نام کاربری: @{$Balance_id['username']}
+💸 مبلغ تایید شده: $format_price_cart تومان";
+        Editmessagetext($from_id, $message_id, $textconfrom, $Confirm_pay);
     }
     $Payment_report['price'] = number_format($Payment_report['price']);
     $text_report = "📣 یک ادمین رسید پرداخت  را تایید کرد.
@@ -3494,10 +3515,17 @@ $caption";
 } elseif ($user['step'] == "reject-dec") {
     $Payment_report = select("Payment_report", "*", "id_order", $user['Processing_value_one'], "select");
     update("Payment_report", "dec_not_confirmed", $text, "id_order", $user['Processing_value_one']);
-    $text_reject = "❌ کاربر گرامی پرداخت شما به دلیل زیر رد گردید.
+    if (isAgentReceiptPaymentReport($Payment_report)) {
+        $agentInvoiceId = explode('|', $Payment_report['id_invoice'], 2)[1] ?? '';
+        $text_reject = "❌ رسید سفارش شما رد شد.
+🛒 کد سفارش: <code>{$agentInvoiceId}</code>
+✍️ $text";
+    } else {
+        $text_reject = "❌ کاربر گرامی پرداخت شما به دلیل زیر رد گردید.
 ✍️ $text
 🛒 کد پیگیری پرداخت: {$user['Processing_value_one']}
                 ";
+    }
     sendmessage($from_id, $textbotlang['Admin']['Payment']['Rejected'], $keyboardadmin, 'HTML');
     sendmessage($user['Processing_value'], $text_reject, null, 'HTML');
     step('home', $from_id);
