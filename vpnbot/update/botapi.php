@@ -1,5 +1,14 @@
 <?php
 require_once 'config.php';
+function formatHtmlBackticksAsCode($text, $parseMode = null)
+{
+    if ($parseMode !== 'HTML' || !is_string($text) || strpos($text, '`') === false) {
+        return $text;
+    }
+    return preg_replace_callback('/`([^`]+)`/', function ($matches) {
+        return '<code>' . htmlspecialchars($matches[1], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</code>';
+    }, $text);
+}
 function telegram($method, $datas = [],$botToken = null)
 {
     global $ApiToken;
@@ -19,6 +28,7 @@ function telegram($method, $datas = [],$botToken = null)
     }
 }
 function sendmessage($chat_id,$text,$keyboard,$parse_mode){
+    $text = formatHtmlBackticksAsCode($text, $parse_mode);
     return telegram('sendmessage',[
         'chat_id' => $chat_id,
         'text' => $text,
@@ -28,10 +38,12 @@ function sendmessage($chat_id,$text,$keyboard,$parse_mode){
         ]);
 }
 function sendDocument($chat_id, $documentPath, $caption) {
+        $caption = formatHtmlBackticksAsCode($caption, 'HTML');
         telegram('sendDocument',[
         'chat_id' => $chat_id,
         'document' => new CURLFile($documentPath),
         'caption' => $caption,
+        'parse_mode' => 'HTML',
         ]);
 }
 
@@ -43,27 +55,34 @@ function forwardMessage($chat_id,$message_id,$chat_id_user){
     ]);
 }
 function sendphoto($chat_id,$photoid,$caption){
+    $caption = formatHtmlBackticksAsCode($caption, 'HTML');
     telegram('sendphoto',[
         'chat_id' => $chat_id,
         'photo'=> $photoid,
         'caption'=> $caption,
+        'parse_mode' => 'HTML',
     ]);
 }
 function sendvideo($chat_id,$videoid,$caption){
+    $caption = formatHtmlBackticksAsCode($caption, 'HTML');
     telegram('sendvideo',[
         'chat_id' => $chat_id,
         'video'=> $videoid,
         'caption'=> $caption,
+        'parse_mode' => 'HTML',
     ]);
 }
 function senddocumentsid($chat_id,$documentid,$caption){
+    $caption = formatHtmlBackticksAsCode($caption, 'HTML');
     telegram('sendDocument',[
         'chat_id' => $chat_id,
         'document'=> $documentid,
         'caption'=> $caption,
+        'parse_mode' => 'HTML',
     ]);
 }
 function Editmessagetext($chat_id, $message_id, $text, $keyboard,$parse_mode = 'HTML'){
+    $text = formatHtmlBackticksAsCode($text, $parse_mode);
     return telegram('editmessagetext', [
         'chat_id' => $chat_id,
         'message_id' => $message_id,
