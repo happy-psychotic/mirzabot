@@ -117,34 +117,12 @@ if ($user['username'] != $username) {
     update("user", "username", $username, "id", $from_id);
 }
 if (($user['step'] ?? '') !== 'searchservicereseller') {
-    $directLinkUsername = '';
-    $trimmedText = trim((string)$text);
-    if (preg_match('~^(?:vless|vmess|ss|trojan)://[^\s]+#(\S+)~i', $trimmedText, $cfgMatch)) {
-        $cfgFragment = urldecode($cfgMatch[1]);
-        $directLinkUsername = explode('-', $cfgFragment)[0];
-    } elseif (strlen($trimmedText) > 32 && filter_var($trimmedText, FILTER_VALIDATE_URL)) {
-        $subInfo = outputlinksub($trimmedText);
-        if (isset($subInfo)) {
-            $subInfo = json_decode($subInfo, true);
-            if (isset($subInfo['username'])) {
-                $directLinkUsername = (string)$subInfo['username'];
-            }
-        }
-    }
-    if ($directLinkUsername !== '') {
-        $stmtCfgOwn = $pdo->prepare("SELECT id_invoice FROM invoice WHERE username = :u AND id_user = :uid AND bottype = :bottype LIMIT 1");
-        $stmtCfgOwn->execute([
-            ':u' => $directLinkUsername,
-            ':uid' => $from_id,
-            ':bottype' => $ApiToken,
-        ]);
-        $cfgOwnRow = $stmtCfgOwn->fetch(PDO::FETCH_ASSOC);
-        if ($cfgOwnRow) {
-            $datain = "product_" . $cfgOwnRow['id_invoice'];
-            $text = "x";
-            step('home', $from_id);
-            $user['step'] = 'home';
-        }
+    $ownedInvoiceByLink = resellerFindOwnedInvoiceByDirectLink((int)$from_id, (string)$ApiToken, (string)$text);
+    if ($ownedInvoiceByLink) {
+        $datain = "product_" . $ownedInvoiceByLink;
+        $text = "x";
+        step('home', $from_id);
+        $user['step'] = 'home';
     }
 }
 if ($text == "/start") {
