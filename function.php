@@ -2319,19 +2319,6 @@ function isAgentReceiptPaymentReport(array $paymentReport): bool
     return strpos((string)($paymentReport['id_invoice'] ?? ''), 'agentprofit|') === 0;
 }
 
-function getAgentReceiptRefundAmount(array $invoice): int
-{
-    $storedAmount = intval($invoice['agent_customer_price'] ?? 0);
-    if ($storedAmount > 0) {
-        return $storedAmount;
-    }
-
-    $baseAmount = intval($invoice['price_product'] ?? 0);
-    $profit = max(0, intval($invoice['agent_profit'] ?? 0));
-
-    return $baseAmount + $profit;
-}
-
 function formatTelegramCode($value)
 {
     return "<code>" . htmlspecialchars((string)$value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</code>";
