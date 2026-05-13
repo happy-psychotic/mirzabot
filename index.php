@@ -889,7 +889,7 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
     }
     if ($marzban['type'] == "Manualsale") {
         $userinfo = select("manualsell", "*", "username", $nameloc['username'], "select");
-        if ($user['agent'] == 'n' && intval($nameloc['agent_customer_price']) > 0) {
+        if ($user['agent'] == 'n' && getAgentReceiptRefundAmount($nameloc) > 0) {
             $latestAgentReceipt = getLatestAgentReceiptReport($nameloc['id_invoice']);
             $agentReceiptButton = ($latestAgentReceipt && in_array($latestAgentReceipt['payment_Status'], ['waiting', 'paid']))
                 ? ['text' => $latestAgentReceipt['payment_Status'] == 'paid' ? "🟢 رسید تایید شد" : "🟢 رسید ارسال شد", 'callback_data' => 'noop']
@@ -1132,7 +1132,7 @@ $nameconfig";
         if (count($tempArray) > 0) {
             $keyboardsetting['inline_keyboard'][] = $tempArray;
         }
-        if ($user['agent'] == 'n' && intval($nameloc['agent_customer_price']) > 0) {
+        if ($user['agent'] == 'n' && getAgentReceiptRefundAmount($nameloc) > 0) {
             $latestAgentReceipt = getLatestAgentReceiptReport($nameloc['id_invoice']);
             $agentReceiptButton = ($latestAgentReceipt && in_array($latestAgentReceipt['payment_Status'], ['waiting', 'paid']))
                 ? ['text' => $latestAgentReceipt['payment_Status'] == 'paid' ? "🟢 رسید تایید شد" : "🟢 رسید ارسال شد", 'callback_data' => 'noop']
@@ -4552,8 +4552,8 @@ $textonebuy
         sendmessage($from_id, "✅ رسید این سفارش قبلاً ارسال شده است.", $keyboard, 'HTML');
         return;
     }
-    $agentProfit = intval($agentInvoice['agent_profit']);
-    $customerPrice = intval($agentInvoice['agent_customer_price']);
+    $agentProfit = max(0, intval($agentInvoice['agent_profit']));
+    $customerPrice = getAgentReceiptRefundAmount($agentInvoice);
     if ($customerPrice <= 0) {
         sendmessage($from_id, "❌ این سفارش امکان ارسال رسید نماینده ندارد.", $keyboard, 'HTML');
         return;
