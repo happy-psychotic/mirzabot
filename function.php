@@ -2163,10 +2163,6 @@ function hasUsableHelpContent()
             return true;
         }
 
-        if (isset($setting['linkappstatus']) && strval($setting['linkappstatus']) === "1") {
-            $stmt = $pdo->query("SELECT COUNT(*) FROM app WHERE TRIM(COALESCE(name, '')) <> '' AND TRIM(COALESCE(link, '')) <> ''");
-            return $stmt !== false && intval($stmt->fetchColumn()) > 0;
-        }
     } catch (Throwable $exception) {
     }
 

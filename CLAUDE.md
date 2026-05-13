@@ -4,8 +4,7 @@
 Mirzabot is a PHP Telegram bot for selling VPN services. It includes:
 - Telegram bot webhook logic (main bot + reseller bots)
 - VPN panel integration layer (Marzban, Marzneshin, x-ui, Alireza, Hiddify, etc.)
-- Admin web panel under `/panel`
-- Telegram mini-app frontend under `/app` (compiled, do not hand-edit)
+- Legacy `/panel` web admin and `/app` mini-app have been removed from this fork
 - Token-authenticated JSON APIs under `/api`
 - Cron-driven background jobs under `/cronbot`
 - Reseller bot instances under `/vpnbot/Default/` (template) and `/vpnbot/<botname>/` (live copies)

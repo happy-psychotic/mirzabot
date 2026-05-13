@@ -107,13 +107,6 @@ if (!function_exists('shouldShowMainMenuButton')) {
                 return isset($setting['wheelـluck']) && strval($setting['wheelـluck']) === "1";
 
             case 'text_help':
-                if (isset($setting['linkappstatus']) && strval($setting['linkappstatus']) === "1") {
-                    $stmt = $pdo->prepare("SELECT COUNT(*) FROM app WHERE TRIM(COALESCE(name, '')) <> '' AND TRIM(COALESCE(link, '')) <> ''");
-                    $stmt->execute();
-                    if (intval($stmt->fetchColumn()) > 0) {
-                        return true;
-                    }
-                }
                 $stmt = $pdo->prepare("SELECT COUNT(*) FROM help WHERE TRIM(COALESCE(name_os, '')) <> '' AND (TRIM(COALESCE(Description_os, '')) <> '' OR TRIM(COALESCE(Media_os, '')) <> '')");
                 $stmt->execute();
                 return intval($stmt->fetchColumn()) > 0;
@@ -340,7 +333,6 @@ $setting_panel =  json_encode([
     'keyboard' => [
         [['text' => "⚙️ وضعیت قابلیت ها"]],
         [['text' => "📣 گزارشات ربات"], ['text' => "📯 تنظیمات کانال"]],
-        [['text' => "✅ فعالسازی پنل تحت وب"]],
         [['text' => "🗑 بهینه سازی ربات "]],
         [['text' => "📝 تنظیم متن ربات"],['text' => "👨‍🔧 بخش ادمین"]],
         [['text' => "➕ محدودیت ساخت اکانت تست برای همه"]],
@@ -663,42 +655,10 @@ if ($table_exists) {
             $helpcwtgory['inline_keyboard'][] = [['text' => $result['category'], 'callback_data' => "helpctgoryـ{$result['category']}"]
             ];
         }
-if($setting['linkappstatus'] == "1"){
-    $helpcwtgory['inline_keyboard'][] = [
-        ['text' => "🔗 لینک دانلود برنامه", 'callback_data' => "linkappdownlod"],
-    ];    
-    }
 $helpcwtgory['inline_keyboard'][] = [
     ['text' => $textbotlang['users']['backbtn'], 'callback_data' => "backuser"],
 ];
 $json_list_helpـcategory = json_encode($helpcwtgory);
-
-
-//------------------  [ help app ]----------------//
-    $stmt = $pdo->prepare("SELECT * FROM app");
-    $stmt->execute();
-    $helpapp = ['inline_keyboard' => []];
-    while ($result = $stmt->fetch(PDO::FETCH_ASSOC)) {
-            $helpapp['inline_keyboard'][] = [['text' => $result['name'], 'url' =>$result['link']]
-            ];
-        }
-$helpapp['inline_keyboard'][] = [
-    ['text' => $textbotlang['users']['backbtn'], 'callback_data' => "backuser"],
-];
-$json_list_helpـlink = json_encode($helpapp);
-//------------------  [ help app admin ]----------------//
-    $stmt = $pdo->prepare("SELECT * FROM app");
-    $stmt->execute();
-    $helpappremove = ['keyboard' => [],'resize_keyboard' => true];
-    while ($result = $stmt->fetch(PDO::FETCH_ASSOC)) {
-            $helpappremove['keyboard'][] = [
-            ['text' => $result['name']],
-        ];
-        }
-$helpappremove['keyboard'][] = [
-    ['text' => $textbotlang['Admin']['backadmin']],
-];
-$json_list_remove_helpـlink = json_encode($helpappremove);
  //------------------  [ listpanelusers ]----------------//
     $stmt = $pdo->prepare("SELECT * FROM marzban_panel WHERE status = 'active' AND (agent = :agent OR agent = 'all')");
     $stmt->bindParam(':agent', $users['agent']);
@@ -1476,14 +1436,6 @@ $wheelkeyboard =  json_encode([
     'keyboard' => [
         [['text' => "🎲 مبلغ برنده شدن کاربر"]],
         [['text' => $textbotlang['Admin']['backadmin']]]
-    ],
-    'resize_keyboard' => true
-]);
-$keyboardlinkapp = json_encode([
-    'keyboard' => [
-        [['text' => "🔗 اضافه کردن برنامه"],['text' => "❌ حذف برنامه"]],
-        [['text' => "✏️ ویرایش برنامه"]],
-        [['text' => $textbotlang['Admin']['backadmin']],['text' => $textbotlang['Admin']['backmenu']]]
     ],
     'resize_keyboard' => true
 ]);

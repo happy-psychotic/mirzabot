@@ -3347,11 +3347,6 @@ if ($user['step'] == "createusertest" || preg_match('/locationtest_(.*)/', $data
                 ['text' => $result['name_os'], 'callback_data' => "helpos_{$result['id']}"]
             ];
         }
-        if ($setting['linkappstatus'] == "1") {
-            $helpidos['inline_keyboard'][] = [
-                ['text' => "🔗 لینک دانلود برنامه", 'callback_data' => "linkappdownlod"],
-            ];
-        }
         $helpidos['inline_keyboard'][] = [
             ['text' => $textbotlang['users']['backmenu'], 'callback_data' => "backuser"],
         ];
@@ -7302,13 +7297,6 @@ $text_porsant
     $keyboard_json = json_encode($keyboardlists);
     update("user", "pagenumber", $previous_page, "id", $from_id);
     Editmessagetext($from_id, $message_id, $textbotlang['users']['extend']['selectOrderDirect'], $keyboard_json);
-} elseif ($datain == "linkappdownlod") {
-    $countapp = select("app", "*", null, null, "count");
-    if ($countapp == 0) {
-        sendmessage($from_id, $textbotlang['users']['app']['appempty'], $json_list_helpـlink, "html");
-        return;
-    }
-    sendmessage($from_id, $textbotlang['users']['app']['selectapp'], $json_list_helpـlink, "html");
 } elseif (preg_match('/changenote_(\w+)/', $datain, $dataget)) {
     $id_invoice = $dataget[1];
     update("user", "Processing_value", $id_invoice, "id", $from_id);

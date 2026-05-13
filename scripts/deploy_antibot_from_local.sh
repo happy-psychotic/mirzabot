@@ -53,7 +53,6 @@ RSYNC_EXCLUDES=(
   --exclude '*.jpg'
   # gitignored server-side dirs — exist on server but not in git, --delete would wipe them
   --exclude 'vendor/'
-  --exclude 'panel/'
   --exclude 'payment/'
   --exclude 'ibsng/'
   --exclude 'ibsng.php'

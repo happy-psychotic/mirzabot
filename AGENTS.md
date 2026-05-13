@@ -20,8 +20,7 @@ This file is the working manual for future agent sessions in this repository. It
 Mirzabot is a PHP Telegram bot for selling VPN services. It includes:
 - Telegram bot webhook logic
 - VPN panel integration layer for multiple panel types
-- Admin web panel
-- Telegram mini-app frontend under `app/`
+- Telegram bot webhook logic
 - Token-authenticated JSON APIs under `api/`
 - Cron-driven background jobs
 - Installer/update script
@@ -78,26 +77,9 @@ The codebase is monolithic PHP with a database-first design. Many behaviors are 
   - Product-level overrides such as `inbounds`, `proxies`, and reset strategy can change adapter behavior.
   - Subscription URLs and config extraction logic vary by backend.
 
-### Admin Web Panel
-- Directory: `/panel`
-- Main files:
-  - [panel/index.php](/home/saeid/Documents/AntiBan/panel/index.php)
-  - [panel/login.php](/home/saeid/Documents/AntiBan/panel/login.php)
-  - [panel/header.php](/home/saeid/Documents/AntiBan/panel/header.php)
-- Notes:
-  - Old-style PHP pages rendered server-side.
-  - Session-based login.
-  - Current local fork removed the previous `setting.iplogin` gate from web login. Treat future auth-related edits as sensitive.
-  - Passwords are compared as plain strings in current code. Treat auth-related edits as sensitive.
-
-### Mini-App Frontend
-- Directory: `/app`
-- Entry:
-  - [app/index.php](/home/saeid/Documents/AntiBan/app/index.php)
-- Notes:
-  - This is a compiled frontend build, not source TypeScript/React code.
-  - Files under `app/assets/` are build artifacts and should not be hand-edited unless there is no source repo available.
-  - Telegram Web App client script is loaded from `app/js/telegram-web-app.js`.
+### Removed Surfaces
+- The legacy `/panel` web admin and `/app` Telegram mini-app have been removed from this fork.
+- Do not reintroduce references to those routes unless the user explicitly asks for them back.
 
 ### JSON API
 - Directory: `/api`
@@ -264,8 +246,7 @@ git push --force-with-lease
 - Inconsistent naming and casing across files and DB fields.
 - English/Persian mixed literals.
 - Some endpoints have older duplicated helper patterns instead of shared abstractions.
-- The frontend in `app/assets/` is compiled output, not maintainable source.
-- There are legacy artifacts in `/panel/assets`, `/panel/img`, and similar folders that are not central to backend logic.
+- Legacy references to `/panel` or `/app` in older upstream docs may no longer apply in this fork.
 
 ## Known Risks
 - Web panel login currently appears to compare plain-text password values.
@@ -284,7 +265,7 @@ git push --force-with-lease
 
 ## Files Usually Safe To Ignore Initially
 - `vendor/`
-- compiled `app/assets/*`
+- old `/panel` and `/app` references from upstream docs
 - most image/font/static asset files
 
 ## When Making Changes

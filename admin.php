@@ -2,7 +2,6 @@
 #----------------[  admin section  ]------------------#
 $textadmin = ["panel", "/panel", $textbotlang['Admin']['textpaneladmin']];
 $text_panel_admin_login_template = "💎 | Version Bot: $version
-📌 | Version Mini App: 0.1.1
 
 <blockquote>🔹 | این ربات کاملاً رایگان است و توسط تیم میرزا توسعه داده شده است</blockquote>
 
@@ -15,18 +14,6 @@ $text_panel_admin_login_template = "💎 | Version Bot: $version
 if (!in_array($from_id, $admin_ids))
     return;
 
-$domainhostsEscaped = htmlspecialchars($domainhosts, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-
-$miniAppInstructionText = <<<HTML
-📌 آموزش فعالسازی مینی اپ در ربات BotFather
-
-/mybots > Select Bot > Bot Setting >  Configure Mini App > Enable Mini App  > Edit Mini App URL
-
-مراحل بالا را طی کنید سپس آدرس زیر را ارسال نمایید :
-
-<code>https://{$domainhostsEscaped}/app/</code>
-HTML;
-
 if (in_array($text, $textadmin) || $datain == "admin") {
     if ($datain == "admin")
         deletemessage($from_id, $message_id);
@@ -34,21 +21,8 @@ if (in_array($text, $textadmin) || $datain == "admin") {
         sendmessage($from_id, $textbotlang['Admin']['activebottext'], $active_panell, 'HTML');
         return;
     }
-    $version_mini_app = file_get_contents('app/version');
     activecron();
-    $text_admin = sprintf($text_panel_admin_login_template, $version, $version_mini_app);
-    sendmessage($from_id, $text_admin, $keyboardadmin, 'HTML');
-    $miniAppInstructionHidden = isset($user['hide_mini_app_instruction']) ? (string) $user['hide_mini_app_instruction'] : '0';
-    if ($miniAppInstructionHidden !== '1') {
-        $miniAppInstructionKeyboard = json_encode([
-            'inline_keyboard' => [
-                [
-                    ['text' => 'دیگر نمایش نده ⛓️‍💥', 'callback_data' => 'hide_mini_app_instruction'],
-                ],
-            ],
-        ]);
-        sendmessage($from_id, $miniAppInstructionText, $miniAppInstructionKeyboard, 'HTML');
-    }
+    sendmessage($from_id, $text_panel_admin_login_template, $keyboardadmin, 'HTML');
 } elseif ($text == $textbotlang['Admin']['backadmin']) {
     if (strpos($user['step'], 'changetext') === 0 || strpos($user['step'], 'text_') === 0 || strpos($user['step'], 'textpanel') === 0) {
         step('home', $from_id);
@@ -59,21 +33,8 @@ if (in_array($text, $textadmin) || $datain == "admin") {
         sendmessage($from_id, $textbotlang['Admin']['activebottext'], $active_panell, 'HTML');
         return;
     }
-    $version_mini_app = file_get_contents('app/version');
-    $text_admin = sprintf($text_panel_admin_login_template, $version, $version_mini_app);
-    sendmessage($from_id, $text_admin, $keyboardadmin, 'HTML');
+    sendmessage($from_id, $text_panel_admin_login_template, $keyboardadmin, 'HTML');
     step('home', $from_id);
-    return;
-} elseif ($datain == "hide_mini_app_instruction") {
-    if (!in_array($from_id, $admin_ids))
-        return;
-    if (($user['hide_mini_app_instruction'] ?? '0') !== '1') {
-        update("user", "hide_mini_app_instruction", "1", "id", $from_id);
-        $user['hide_mini_app_instruction'] = '1';
-    }
-    $confirmationKeyboard = json_encode(['inline_keyboard' => []]);
-    $confirmationText = $miniAppInstructionText . "\n\n✅ این پیام دیگر برای شما نمایش داده نخواهد شد.";
-    Editmessagetext($from_id, $message_id, $confirmationText, $confirmationKeyboard, 'HTML');
     return;
 } elseif ($text == $textbotlang['Admin']['backmenu']) {
     if (strpos($user['step'], 'changetext') === 0 || strpos($user['step'], 'text_') === 0 || strpos($user['step'], 'textpanel') === 0) {
@@ -2184,10 +2145,6 @@ $caption";
         '1' => $textbotlang['Admin']['Status']['statuson'],
         '0' => $textbotlang['Admin']['Status']['statusoff']
     ][$setting['categoryhelp']];
-    $btnstatuslinkapp = [
-        '1' => $textbotlang['Admin']['Status']['statuson'],
-        '0' => $textbotlang['Admin']['Status']['statusoff']
-    ][$setting['linkappstatus']];
     $cronteststatustext = [
         true => $textbotlang['Admin']['Status']['statuson'],
         false => $textbotlang['Admin']['Status']['statusoff']
@@ -2402,11 +2359,6 @@ $caption";
                 ['text' => "⚙️ زمان حذف", 'callback_data' => "settimecornremovevolume"],
                 ['text' => $cronremovevolumestatustext, 'callback_data' => "editstsuts-notifremove_volume-{$status_cron['remove_volume']}"],
                 ['text' => "❌ کرون حذف حجم", 'callback_data' => "none"],
-            ],
-            [
-                ['text' => "⚙️ تنظیمات", 'callback_data' => "linkappsetting"],
-                ['text' => $btnstatuslinkapp, 'callback_data' => "editstsuts-linkappstatus-{$setting['linkappstatus']}"],
-                ['text' => "🔗لینک دانلود برنامه", 'callback_data' => "linkappstatus"],
             ],
             [
                 ['text' => "⚙️ تنظیمات", 'callback_data' => "scoresetting"],
@@ -2619,13 +2571,6 @@ $caption";
             $valuenew = "1";
         }
         update("setting", "categoryhelp", $valuenew);
-    } elseif ($type == "linkappstatus") {
-        if ($value == "1") {
-            $valuenew = "0";
-        } else {
-            $valuenew = "1";
-        }
-        update("setting", "linkappstatus", $valuenew);
     } elseif ($type == "btnstautslanguage") {
         if ($setting['languageru'] == "1") {
             sendmessage($from_id, "زبان روسیه ای روشن است و نمی توانید زبان انگلیسی را تغییر وضعیت دهید", null, 'HTML');
@@ -2818,10 +2763,6 @@ $caption";
         '1' => $textbotlang['Admin']['Status']['statuson'],
         '0' => $textbotlang['Admin']['Status']['statusoff']
     ][$setting['categoryhelp']];
-    $btnstatuslinkapp = [
-        '1' => $textbotlang['Admin']['Status']['statuson'],
-        '0' => $textbotlang['Admin']['Status']['statusoff']
-    ][$setting['linkappstatus']];
     $cronteststatustext = [
         true => $textbotlang['Admin']['Status']['statuson'],
         false => $textbotlang['Admin']['Status']['statusoff']
@@ -3040,11 +2981,6 @@ $caption";
                 ['text' => "⚙️ زمان حذف", 'callback_data' => "settimecornremovevolume"],
                 ['text' => $cronremovevolumestatustext, 'callback_data' => "editstsuts-notifremove_volume-{$status_cron['remove_volume']}"],
                 ['text' => "❌ کرون حذف حجم", 'callback_data' => "none"],
-            ],
-            [
-                ['text' => "⚙️ تنظیمات", 'callback_data' => "linkappsetting"],
-                ['text' => $btnstatuslinkapp, 'callback_data' => "editstsuts-linkappstatus-{$setting['linkappstatus']}"],
-                ['text' => "🔗لینک دانلود برنامه", 'callback_data' => "linkappstatus"],
             ],
             [
                 ['text' => "⚙️ تنظیمات", 'callback_data' => "scoresetting"],
@@ -7040,28 +6976,6 @@ if ($datain == "settimecornremove" && $adminrulecheck['rule'] == "administrator"
     sendDocument($from_id, 'api/documents.txt', "📌 داکیومنت api ربات 
 نکات : 
 ۱ - در صورتی که به endpoint خاصی نیاز داشتید به اکانت پشتیبانی پیام دهید تا بررسی شود.");
-} elseif ($text == "✅ فعالسازی پنل تحت وب" && $adminrulecheck['rule'] == "administrator") {
-    $admin_select = select("admin", "*", "id_admin", $from_id, "select");
-    $randomString = bin2hex(random_bytes(6));
-    update("admin", "username", $from_id, "id_admin", $from_id);
-    if ($admin_select['password'] == null) {
-        update("admin", "password", $randomString, "id_admin", $from_id);
-    } else {
-        $randomString = $admin_select['password'];
-    }
-    $keyboardstatistics = json_encode([
-        'inline_keyboard' => [
-            [
-                ['text' => "تنظیم آیپی ورود", 'callback_data' => 'iploginset'],
-            ],
-        ]
-    ]);
-    sendmessage($from_id, "✅  پنل تحت وب شما با موفقیت فعال گردید.
-
-
-🔗آدرس ورود : https://$domainhosts/panel
-👤نام کاربری :  <code>$from_id</code>
-🔑رمز عبور :  <code>$randomString</code>", $keyboardstatistics, 'HTML');
 } elseif (preg_match('/addordermanualـ(\w+)/', $datain, $dataget)) {
     $iduser = $dataget[1];
     update("user", "Processing_value", $iduser, "id", $from_id);
@@ -9973,13 +9887,6 @@ elseif ($text == "🫣 مخفی کردن پنل برای یک کاربر" && $ad
     $stmt->execute();
     sendmessage($from_id, "✅محصول بروزرسانی شد", $shopkeyboard, 'HTML');
     step('home', $from_id);
-} elseif ($datain == "iploginset") {
-    sendmessage($from_id, "📌 جهت ورود به پنل تحت وب نیاز است حتما یک آیپی ثابت ثبت کنید تا ورود را با آن آیپی انجام دهید  لطفا آیپی خود را ارسال نمایید", $shopkeyboard, 'HTML');
-    step("getiplogin", $from_id);
-} elseif ($user['step'] == "getiplogin") {
-    update("setting", "iplogin", $text, null, null);
-    step("home", $from_id);
-    sendmessage($from_id, "✅ آیپی با موفقیت تنظیم شد", $shopkeyboard, 'HTML');
 } elseif (preg_match('/extendadmin_(\w+)/', $datain, $dataget) || strpos($text, "/extend ") !== false) {
     if ($text[0] == "/") {
         $usernameconfig = explode(" ", $text)[1];
@@ -10636,40 +10543,6 @@ if ($datain == "settimecornday" && $adminrulecheck['rule'] == "administrator") {
     sendmessage($from_id, $textbotlang['Admin']['cronjob']['changeddata'], $keyboardadmin, 'HTML');
     step("home", $from_id);
     update("setting", "daywarn", $text);
-} elseif ($datain == "linkappsetting") {
-    sendmessage($from_id, "📌 یک گزینه را انتخاب نمایید.", $keyboardlinkapp, 'HTML');
-} elseif ($text == "🔗 اضافه کردن برنامه") {
-    sendmessage($from_id, "📌 جهت اضافه کردن لینک دانلود برنامه  نام اپ یا نام دکمه را ارسال نمایید.", $backadmin, 'HTML');
-    step("getnamebtnapp", $from_id);
-} elseif ($user['step'] == "getnamebtnapp") {
-    if (strlen($text) > 200) {
-        sendmessage($from_id, "📌 نام باید کمتر از ۲۰۰ کاراکتر باشد.", $backadmin, 'HTML');
-        return;
-    }
-    savedata("clear", "name", $text);
-    sendmessage($from_id, "📌 لینک دانلود اپ را ارسال نمایید", $backadmin, 'HTML');
-    step("geturlbtnapp", $from_id);
-} elseif ($user['step'] == "geturlbtnapp") {
-    if (!filter_var($text, FILTER_VALIDATE_URL)) {
-        sendmessage($from_id, $textbotlang['Admin']['managepanel']['Invalid-domain'], $backadmin, 'HTML');
-        return;
-    }
-    $userdate = json_decode($user['Processing_value'], true);
-    $stmt = $pdo->prepare("INSERT INTO app (name, link) VALUES (:name, :link)");
-    $stmt->bindParam(':name', $userdate['name'], PDO::PARAM_STR);
-    $stmt->bindParam(':link', $text, PDO::PARAM_STR);
-    $stmt->execute();
-    sendmessage($from_id, "✅ لینک اپ شما با موفقیت اضافه گردید.", $keyboardlinkapp, 'HTML');
-    step("home", $from_id);
-} elseif ($text == "❌ حذف برنامه") {
-    sendmessage($from_id, "📌 برای حذف برنامه از لیست زیر نام برنامه را انتخاب کنید", $json_list_remove_helpـlink, 'HTML');
-    step("getnameappforremove", $from_id);
-} elseif ($user['step'] == "getnameappforremove") {
-    sendmessage($from_id, "✅ برنامه با موفقیت حذف گردید.", $keyboardlinkapp, 'HTML');
-    step('home', $from_id);
-    $stmt = $pdo->prepare("DELETE FROM app WHERE name = :name");
-    $stmt->bindParam(':name', $text, PDO::PARAM_STR);
-    $stmt->execute();
 } elseif ($text == "⚙️ وضعیت قابلیت ها پنل" && $adminrulecheck['rule'] == "administrator") {
     $panel = select("marzban_panel", "*", "name_panel", $user['Processing_value'], "select");
     if (!in_array($panel['subvip'], ['offsubvip', 'onsubvip'])) {
@@ -11854,18 +11727,6 @@ if ($datain == "settimecornday" && $adminrulecheck['rule'] == "administrator") {
     $keyboard_json = json_encode($keyboardlists);
     update("user", "pagenumber", $next_page, "id", $from_id);
     Editmessagetext($from_id, $message_id, $textbotlang['Admin']['ManageUser']['mangebtnuserdec'], $keyboard_json);
-} elseif ($text == "✏️ ویرایش برنامه") {
-    sendmessage($from_id, "📌 برای ویرایش برنامه از لیست زیر نام برنامه را انتخاب کنید", $json_list_remove_helpـlink, 'HTML');
-    step("edit_app", $from_id);
-} elseif ($user['step'] == "edit_app") {
-    savedata("clear", "nameapp", $text);
-    step("get_new_lin_app", $from_id);
-    sendmessage($from_id, "📌 لینک جدید اپ را ارسال کنید", $backadmin, 'HTML');
-} elseif ($user['step'] == "get_new_lin_app") {
-    step("home", $from_id);
-    $userdata = json_decode($user['Processing_value'], true);
-    sendmessage($from_id, "✅ لینک برنامه با موفقیت بروزرسانی گردید.", $keyboardlinkapp, 'HTML');
-    update("app", "link", $text, "name", $userdata['nameapp']);
 } elseif ($datain == "nowpaymentsetting") {
     sendmessage($from_id, $textbotlang['users']['selectoption'], $nowpayment_setting_keyboard, 'HTML');
 } elseif ($text == "⏳ زمان تایید خودکار بدون بررسی") {
