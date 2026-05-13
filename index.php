@@ -402,6 +402,10 @@ if (preg_match('~^(?:vless|vmess|ss|trojan)://[^\s]+#(\S+)~i', trim($text), $cfg
     $cfgFragment = urldecode($cfgMatch[1]);
     $cfgUsername = explode('-', $cfgFragment)[0];
     if ($cfgUsername !== '') {
+        if ($user['step'] == "getuseragnetservice") {
+            // During service search, treat config links as search input instead of volume-only lookup.
+            $text = $cfgUsername;
+        } else {
         $stmtCfgOwn = $pdo->prepare("SELECT id_invoice FROM invoice WHERE username = :u AND id_user = :uid LIMIT 1");
         $stmtCfgOwn->execute([':u' => $cfgUsername, ':uid' => $from_id]);
         $cfgOwnRow = $stmtCfgOwn->fetch(PDO::FETCH_ASSOC);
@@ -435,6 +439,7 @@ if (preg_match('~^(?:vless|vmess|ss|trojan)://[^\s]+#(\S+)~i', trim($text), $cfg
                 }
             }
             return;
+        }
         }
     }
 }
