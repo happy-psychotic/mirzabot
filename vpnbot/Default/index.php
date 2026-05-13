@@ -116,6 +116,25 @@ if ($user['bottype'] != $ApiToken) {
 if ($user['username'] != $username) {
     update("user", "username", $username, "id", $from_id);
 }
+if (($user['step'] ?? '') !== 'searchservicereseller' && preg_match('~^(?:vless|vmess|ss|trojan)://[^\s]+#(\S+)~i', trim((string)$text), $cfgMatch)) {
+    $cfgFragment = urldecode($cfgMatch[1]);
+    $cfgUsername = explode('-', $cfgFragment)[0];
+    if ($cfgUsername !== '') {
+        $stmtCfgOwn = $pdo->prepare("SELECT id_invoice FROM invoice WHERE username = :u AND id_user = :uid AND bottype = :bottype LIMIT 1");
+        $stmtCfgOwn->execute([
+            ':u' => $cfgUsername,
+            ':uid' => $from_id,
+            ':bottype' => $ApiToken,
+        ]);
+        $cfgOwnRow = $stmtCfgOwn->fetch(PDO::FETCH_ASSOC);
+        if ($cfgOwnRow) {
+            $datain = "product_" . $cfgOwnRow['id_invoice'];
+            $text = "x";
+            step('home', $from_id);
+            $user['step'] = 'home';
+        }
+    }
+}
 if ($text == "/start") {
     $textstart = "✋سلام $first_name عزیز به ربات ما خوش اومدی.
 
