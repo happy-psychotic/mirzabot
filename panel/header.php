@@ -1,3 +1,15 @@
+<?php
+$panelAdminRule = $_SESSION["admin_rule"] ?? null;
+if ($panelAdminRule === null && isset($_SESSION["user"], $pdo)) {
+    $headerAdminQuery = $pdo->prepare("SELECT rule FROM admin WHERE username = :username LIMIT 1");
+    $headerAdminQuery->bindParam(':username', $_SESSION["user"], PDO::PARAM_STR);
+    $headerAdminQuery->execute();
+    $headerAdmin = $headerAdminQuery->fetch(PDO::FETCH_ASSOC);
+    $panelAdminRule = $headerAdmin['rule'] ?? null;
+    $_SESSION["admin_rule"] = $panelAdminRule;
+}
+$canSeePendingReceipts = in_array($panelAdminRule, ['administrator', 'Seller'], true);
+?>
 <!--header start-->
       <header class="header white-bg">
           <div>
@@ -73,12 +85,14 @@
                           <span>تراکنش ها</span>
                       </a>
                   </li>
+                  <?php if ($canSeePendingReceipts): ?>
                   <li>
                       <a href="pending_receipts.php">
                           <i class="icon-time"></i>
                           <span>رسیدهای تایید نشده</span>
                       </a>
-                  </li>   
+                  </li>
+                  <?php endif; ?>
                   <li>
                       <a href="cancelService.php">
                           <i class="icon-trash"></i>

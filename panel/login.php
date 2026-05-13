@@ -27,6 +27,7 @@ if (isset($_POST['login'])) {
                 sendmessage($admin, $texts, null, 'html');
             }
             $_SESSION["user"] = $result["username"];
+            $_SESSION["admin_rule"] = $result["rule"];
             header('Location: index.php');
             exit;
         } else {

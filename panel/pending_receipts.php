@@ -9,6 +9,11 @@ if (!isset($_SESSION["user"]) || !$result) {
     header('Location: login.php');
     return;
 }
+if (!in_array($result['rule'], ['administrator', 'Seller'], true)) {
+    header('Location: index.php');
+    return;
+}
+$_SESSION["admin_rule"] = $result['rule'];
 $query = $pdo->prepare("SELECT * FROM Payment_report WHERE payment_Status = 'waiting' ORDER BY time ASC");
 $query->execute();
 $listpayment = $query->fetchAll();
