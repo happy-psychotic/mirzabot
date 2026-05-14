@@ -1065,11 +1065,9 @@ function DirectPayment($order_id, $image = 'images.jpg')
         $textcreatuser = str_replace('{location}', $marzban_list_get['name_panel'], $textcreatuser);
         $textcreatuser = str_replace('{day}', $get_invoice['Service_time'], $textcreatuser);
         $textcreatuser = str_replace('{volume}', $get_invoice['Volume'], $textcreatuser);
-        $serviceLinksText = formatServiceLinksForDelivery($dataoutput['configs'] ?? [], $output_config_link);
-        $textcreatuser = str_replace('{config}', $serviceLinksText, $textcreatuser);
-        $textcreatuser = str_replace('{links}', "", $textcreatuser);
+        $textcreatuser = str_replace('{config}', formatSubscriptionLinkForDelivery($output_config_link), $textcreatuser);
+        $textcreatuser = str_replace('{links}', $config_links_text, $textcreatuser);
         $textcreatuser = str_replace('{links2}', "{$output_config_link}", $textcreatuser);
-        $textcreatuser = normalizeDeliveredServiceText($textcreatuser);
         if ($marzban_list_get['type'] == "Manualsale" || $marzban_list_get['type'] == "ibsng" || $marzban_list_get['type'] == "mikrotik") {
             $textcreatuser = str_replace('{password}', $dataoutput['subscription_url'], $textcreatuser);
             update("invoice", "user_info", $dataoutput['subscription_url'], "id_invoice", $get_invoice['id_invoice']);
@@ -2370,12 +2368,6 @@ function formatServiceLinksForDelivery($configs, $sub_link = '')
     }
 
     return implode("\n\n", $parts);
-}
-function normalizeDeliveredServiceText(string $text): string
-{
-    $text = preg_replace('/^[ \t]*لینک اتصال\s*:\s*[\r\n]+/mu', '', $text);
-    $text = preg_replace("/\n{3,}/", "\n\n", $text);
-    return trim((string)$text);
 }
 function sendMessageService($panel_info, $config, $sub_link, $username_service, $reply_markup, $caption, $invoice_id, $user_id = null, $image = 'images.jpg')
 {
