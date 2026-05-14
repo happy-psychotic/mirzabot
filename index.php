@@ -3282,9 +3282,11 @@ if ($user['step'] == "createusertest" || preg_match('/locationtest_(.*)/', $data
     $textcreatuser = str_replace('{location}', $marzban_list_get['name_panel'], $textcreatuser);
     $textcreatuser = str_replace('{day}', $marzban_list_get['time_usertest'], $textcreatuser);
     $textcreatuser = str_replace('{volume}', $marzban_list_get['val_usertest'], $textcreatuser);
-    $textcreatuser = str_replace('{config}', formatSubscriptionLinkForDelivery($output_config_link), $textcreatuser);
-    $textcreatuser = str_replace('{links}', $config_links_text, $textcreatuser);
+    $serviceLinksText = formatServiceLinksForDelivery($dataoutput['configs'] ?? [], $output_config_link);
+    $textcreatuser = str_replace('{config}', $serviceLinksText, $textcreatuser);
+    $textcreatuser = str_replace('{links}', "", $textcreatuser);
     $textcreatuser = str_replace('{links2}', $output_config_link, $textcreatuser);
+    $textcreatuser = normalizeDeliveredServiceText($textcreatuser);
     if ($marzban_list_get['type'] == "ibsng" || $marzban_list_get['type'] == "mikrotik") {
         $textcreatuser = str_replace('{password}', $dataoutput['subscription_url'], $textcreatuser);
         update("invoice", "user_info", $dataoutput['subscription_url'], "id_invoice", $randomString);
@@ -4354,9 +4356,11 @@ $textinvite
     $textcreatuser = str_replace('{location}', $marzban_list_get['name_panel'], $textcreatuser);
     $textcreatuser = str_replace('{day}', $info_product['Service_time'], $textcreatuser);
     $textcreatuser = str_replace('{volume}', $info_product['Volume_constraint'], $textcreatuser);
-    $textcreatuser = str_replace('{config}', formatSubscriptionLinkForDelivery($output_config_link), $textcreatuser);
-    $textcreatuser = str_replace('{links}', $config_links_text, $textcreatuser);
+    $serviceLinksText = formatServiceLinksForDelivery($dataoutput['configs'] ?? [], $output_config_link);
+    $textcreatuser = str_replace('{config}', $serviceLinksText, $textcreatuser);
+    $textcreatuser = str_replace('{links}', "", $textcreatuser);
     $textcreatuser = str_replace('{links2}', $output_config_link, $textcreatuser);
+    $textcreatuser = normalizeDeliveredServiceText($textcreatuser);
     if (intval($info_product['Volume_constraint']) == 0) {
         $textcreatuser = str_replace('گیگابایت', "", $textcreatuser);
     }
@@ -5067,9 +5071,11 @@ $textonebuy
         $textcreatuser = str_replace('{location}', $marzban_list_get['name_panel'], $textcreatuser);
         $textcreatuser = str_replace('{day}', $info_product['Service_time'], $textcreatuser);
         $textcreatuser = str_replace('{volume}', $info_product['Volume_constraint'], $textcreatuser);
-        $textcreatuser = str_replace('{config}', formatSubscriptionLinkForDelivery($output_config_link), $textcreatuser);
-        $textcreatuser = str_replace('{links}', $config_links_text, $textcreatuser);
+        $serviceLinksText = formatServiceLinksForDelivery($dataoutput['configs'] ?? [], $output_config_link);
+        $textcreatuser = str_replace('{config}', $serviceLinksText, $textcreatuser);
+        $textcreatuser = str_replace('{links}', "", $textcreatuser);
         $textcreatuser = str_replace('{links2}', "{$output_config_link}", $textcreatuser);
+        $textcreatuser = normalizeDeliveredServiceText($textcreatuser);
         sendMessageService($marzban_list_get, $dataoutput['configs'], $output_config_link, $dataoutput['username'], $Shoppinginfo, $textcreatuser, $randomString);
     }
     $user_Balance = select("user", "*", "id", $from_id, "select");
