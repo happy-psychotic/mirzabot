@@ -254,6 +254,7 @@ $keyboardadmin = json_encode([
     'keyboard' => [
         [['text' => "🔍 جستجو کاربر"],['text' => "🔍 جستجو سرویس"]],
         [['text' => "👤 مدیریت کاربر"]],
+        [['text' => "💵 رسید های تایید نشده"]],
         [['text' => $textbotlang['users']['backbtn']]]
     ],
     'resize_keyboard' => true
@@ -263,6 +264,7 @@ if($adminrulecheck['rule'] == "support"){
 $keyboardadmin = json_encode([
     'keyboard' => [
         [['text' => "👤 مدیریت کاربر"],['text' =>"👁‍🗨 جستجو کاربر"]],
+        [['text' => "💵 رسید های تایید نشده"]],
         [['text' => $textbotlang['users']['backbtn']]]
     ],
     'resize_keyboard' => true
