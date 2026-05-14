@@ -1303,10 +1303,10 @@ $textconnect
         telegram('sendphoto', [
             'chat_id'      => $from_id,
             'photo'        => new CURLFile($urlimage),
-            'caption'      => formatConfigLinksForDelivery([$link]),
+            'caption'      => "QR کانفیگ",
             'parse_mode'   => "HTML",
-            'reply_markup' => $isLast ? $backKb : null,
         ]);
+        sendmessage($from_id, formatConfigLinksForDelivery([$link]), $isLast ? $backKb : null, 'HTML');
         unlink($urlimage);
     }
 } elseif (preg_match('/configget_(.*)_(.*)/', $datain, $dataget)) {
@@ -1338,9 +1338,11 @@ $textconnect
             telegram('sendphoto', [
                 'chat_id' => $from_id,
                 'photo' => new CURLFile($urlimage),
-                'caption' => formatConfigLinksForDelivery([$DataUserOut['links'][$i]]),
+                'caption' => "QR کانفیگ",
                 'parse_mode' => "HTML",
             ]);
+            $isLast = ($i === array_key_last($DataUserOut['links']));
+            sendmessage($from_id, formatConfigLinksForDelivery([$DataUserOut['links'][$i]]), $isLast ? $bakinfos : null, 'HTML');
             unlink($urlimage);
         }
         return;
@@ -1352,9 +1354,10 @@ $textconnect
     telegram('sendphoto', [
         'chat_id' => $from_id,
         'photo' => new CURLFile($urlimage),
-        'caption' => formatConfigLinksForDelivery([$DataUserOut['links'][$dataget[2]]]),
+        'caption' => "QR کانفیگ",
         'parse_mode' => "HTML",
     ]);
+    sendmessage($from_id, formatConfigLinksForDelivery([$DataUserOut['links'][$dataget[2]]]), $bakinfos, 'HTML');
     unlink($urlimage);
 } elseif (preg_match('/changestatus_(\w+)/', $datain, $dataget)) {
     $statuschangeservice = select("shopSetting", "*", "Namevalue", "statuschangeservice", "select")['value'];
