@@ -1651,13 +1651,18 @@ $receiptTitle
             return;
         }
         $bakinfos = json_encode(['inline_keyboard' => [[['text' => $textbotlang['users']['stateus']['backinfo'], 'callback_data' => $backCallback]]]]);
+        $subUrl = ($marzban_list_get['sublink'] === 'onsublink') ? trim((string)($DataUserOut['subscription_url'] ?? '')) : '';
         deletemessage($from_id, $message_id);
         foreach ($configLinks as $i => $link) {
+            $isLast = ($i === array_key_last($configLinks));
+            if ($subUrl !== '' && $link === $subUrl) {
+                sendmessage($from_id, formatSubscriptionLinkForDelivery($link), $isLast ? $bakinfos : null, 'HTML');
+                continue;
+            }
             $urlimage = runtimeTempPath("config_qr_{$from_id}_{$i}", '.png');
             $qrCode = createqrcode($link);
             file_put_contents($urlimage, $qrCode->getString());
             addBackgroundImage($urlimage, $qrCode, $Pathfiles . 'images.jpg');
-            $isLast = ($i === array_key_last($configLinks));
             telegram('sendphoto', ['chat_id' => $from_id, 'photo' => new CURLFile($urlimage), 'caption' => formatConfigLinksForDelivery([$link]), 'parse_mode' => "HTML", 'reply_markup' => $isLast ? $bakinfos : null]);
             unlink($urlimage);
         }
