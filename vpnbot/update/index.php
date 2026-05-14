@@ -2007,7 +2007,17 @@ $receiptTitle
             sendmessage($from_id, "❌ هیچ کانفیگی برای این سرویس یافت نشد.", null, 'html');
             return;
         }
-        Editmessagetext($from_id, $message_id, "📲 یکی از کانفیگ‌های زیر را انتخاب کنید.", keyboard_config($configLinks, $nameloc['id_invoice'], true));
+        $bakinfos = json_encode(['inline_keyboard' => [[['text' => $textbotlang['users']['stateus']['backinfo'], 'callback_data' => $backCallback]]]]);
+        deletemessage($from_id, $message_id);
+        foreach ($configLinks as $i => $link) {
+            $urlimage = runtimeTempPath("config_qr_{$from_id}_{$i}", '.png');
+            $qrCode = createqrcode($link);
+            file_put_contents($urlimage, $qrCode->getString());
+            addBackgroundImage($urlimage, $qrCode, $Pathfiles . 'images.jpg');
+            $isLast = ($i === array_key_last($configLinks));
+            telegram('sendphoto', ['chat_id' => $from_id, 'photo' => new CURLFile($urlimage), 'caption' => formatConfigLinksForDelivery([$link]), 'parse_mode' => "HTML", 'reply_markup' => $isLast ? $bakinfos : null]);
+            unlink($urlimage);
+        }
     }
 } elseif (preg_match('/renameservice_(\w+)/', $datain, $dataget)) {
     $id_invoice = $dataget[1];
