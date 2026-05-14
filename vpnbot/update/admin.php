@@ -321,11 +321,20 @@ if ($text == "📞 تنظیم نام کاربری پشتیبانی") {
     $stmt->bindParam(':requestedDate', $month_date_time_start);
     $stmt->execute();
     $suminvoicemonth = $stmt->fetchColumn();
+    $blockBtnText = $user['User_Status'] == "block" ? "✅ رفع مسدودی" : "🚫 مسدود کردن";
+    $blockCallback = $user['User_Status'] == "block" ? "resellerunbanuser_$id_user" : "resellerbanuser_$id_user";
     $keyboardmanage = json_encode([
         'inline_keyboard' => [
             [
-                ['text' => "افزایش موجودی", 'callback_data' => 'addbalanceuser_' . $text],
-                ['text' => "کم کردن موجودی", 'callback_data' => 'lowbalanceuser_' . $text],
+                ['text' => "افزایش موجودی", 'callback_data' => 'addbalanceuser_' . $id_user],
+                ['text' => "کم کردن موجودی", 'callback_data' => 'lowbalanceuser_' . $id_user],
+            ],
+            [
+                ['text' => "💸 درصد تخفیف", 'callback_data' => 'resellersetdiscount_' . $id_user],
+                ['text' => "📦 مشاهده سفارشات", 'callback_data' => 'resellervieworders_' . $id_user],
+            ],
+            [
+                ['text' => $blockBtnText, 'callback_data' => $blockCallback],
             ],
         ]
     ]);
@@ -348,6 +357,7 @@ if ($text == "📞 تنظیم نام کاربری پشتیبانی") {
 💎 گزارشات مالی
 
 🔰 موجودی کاربر : $userbalance
+🔰 درصد تخفیف کاربر : {$user['pricediscount']}%
 🔰 تعداد خرید کل کاربر : {$dayListSell['COUNT(*)']}
 🔰️ مبلغ کل پرداختی  :  {$balanceall['SUM(price)']}
 🔰 جمع کل خرید : {$subbuyuser['SUM(price_product)']}
@@ -658,6 +668,202 @@ if ($text == "📞 تنظیم نام کاربری پشتیبانی") {
 📌 جمع فروش کل : $invoicesum تومان
 ";
     sendmessage($from_id, $statisticsall, null, 'HTML');
+
+// ─── User management from reseller search ───────────────────────────────────
+
+} elseif (preg_match('/resellerbanuser_(\w+)/', $datain, $dataget)) {
+    $id_user = $dataget[1];
+    $targetuser = select("user", "*", "id", $id_user, "select");
+    if (!$targetuser || $targetuser['bottype'] !== $ApiToken) return;
+    if ($targetuser['User_Status'] == "block") {
+        sendmessage($from_id, "❌ این کاربر از قبل مسدود است.", null, 'HTML');
+        return;
+    }
+    $confirmkbd = json_encode(['inline_keyboard' => [
+        [['text' => "✅ تایید مسدودی", 'callback_data' => "resellerconfirmban_$id_user"]],
+        [['text' => "❌ انصراف", 'callback_data' => "none"]],
+    ]]);
+    sendmessage($from_id, "⚠️ آیا از مسدود کردن کاربر <a href=\"tg://user?id=$id_user\">$id_user</a> مطمئن هستید؟", $confirmkbd, 'HTML');
+
+} elseif (preg_match('/resellerconfirmban_(\w+)/', $datain, $dataget)) {
+    $id_user = $dataget[1];
+    $targetuser = select("user", "*", "id", $id_user, "select");
+    if (!$targetuser || $targetuser['bottype'] !== $ApiToken) return;
+    update("user", "User_Status", "block", "id", $id_user);
+    sendmessage($from_id, "✅ کاربر با موفقیت مسدود شد.", $keyboardadmin, 'HTML');
+    sendmessage($id_user, "⛔️ حساب کاربری شما در این ربات مسدود شده است.", null, 'HTML');
+
+} elseif (preg_match('/resellerunbanuser_(\w+)/', $datain, $dataget)) {
+    $id_user = $dataget[1];
+    $targetuser = select("user", "*", "id", $id_user, "select");
+    if (!$targetuser || $targetuser['bottype'] !== $ApiToken) return;
+    if ($targetuser['User_Status'] != "block") {
+        sendmessage($from_id, "❌ این کاربر مسدود نیست.", null, 'HTML');
+        return;
+    }
+    update("user", "User_Status", "Active", "id", $id_user);
+    update("user", "description_blocking", " ", "id", $id_user);
+    sendmessage($from_id, "✅ کاربر با موفقیت از مسدودی خارج شد.", $keyboardadmin, 'HTML');
+    sendmessage($id_user, "✳️ حساب کاربری شما از مسدودی خارج شد. اکنون می‌توانید از ربات استفاده کنید.", null, 'HTML');
+
+} elseif (preg_match('/resellersetdiscount_(\w+)/', $datain, $dataget)) {
+    $id_user = $dataget[1];
+    $targetuser = select("user", "*", "id", $id_user, "select");
+    if (!$targetuser || $targetuser['bottype'] !== $ApiToken) return;
+    update("user", "Processing_value", $id_user, "id", $from_id);
+    $minPrice = min($setting['minpricevolume'], $setting['minpricetime']) > 0
+        ? "حداقل قیمت هر گیگابایت: {$setting['minpricevolume']} تومان / هر روز: {$setting['minpricetime']} تومان\n\n"
+        : "";
+    sendmessage($from_id, "💸 درصد تخفیف فعلی کاربر: <b>{$targetuser['pricediscount']}%</b>\n\n{$minPrice}📌 درصد تخفیف جدید را وارد کنید (عدد بین ۰ تا ۱۰۰):", $backadmin, 'HTML');
+    step('resellergetdiscount', $from_id);
+
+} elseif ($user['step'] == "resellergetdiscount") {
+    $id_user = $user['Processing_value'];
+    $targetuser = select("user", "*", "id", $id_user, "select");
+    if (!$targetuser || $targetuser['bottype'] !== $ApiToken) {
+        step('home', $from_id);
+        return;
+    }
+    if (!ctype_digit($text) || intval($text) < 0 || intval($text) > 100) {
+        sendmessage($from_id, "❌ عدد نامعتبر است. عدد بین ۰ تا ۱۰۰ وارد کنید.", $backadmin, 'HTML');
+        return;
+    }
+    $discount = intval($text);
+    if ($discount > 0) {
+        $violatingProduct = null;
+        $productlist_prices = json_decode(file_get_contents('product.json'), true) ?: [];
+        $stmt2 = $pdo->prepare("SELECT * FROM product WHERE agent = :agent");
+        $stmt2->bindParam(':agent', $userbot['agent']);
+        $stmt2->execute();
+        while ($prod = $stmt2->fetch(PDO::FETCH_ASSOC)) {
+            $sellPrice = isset($productlist_prices[$prod['code_product']]) ? floatval($productlist_prices[$prod['code_product']]) : floatval($prod['price_product']);
+            $minPrice = floatval($prod['price_product']);
+            $discountedPrice = $sellPrice - ($sellPrice * $discount / 100);
+            if ($discountedPrice < $minPrice) {
+                $maxAllowedForProd = $sellPrice > 0 ? floor((1 - $minPrice / $sellPrice) * 100) : 0;
+                if ($violatingProduct === null || $maxAllowedForProd < $violatingProduct['max']) {
+                    $violatingProduct = ['name' => $prod['name_product'], 'max' => $maxAllowedForProd];
+                }
+            }
+        }
+        $priceVol = floatval($setting['pricevolume']);
+        $minPriceVol = floatval($setting['minpricevolume']);
+        $priceTime = floatval($setting['pricetime']);
+        $minPriceTime = floatval($setting['minpricetime']);
+        if ($priceVol > 0 && $minPriceVol > 0) {
+            $effectiveVol = $priceVol - ($priceVol * $discount / 100);
+            if ($effectiveVol < $minPriceVol) {
+                $maxVol = floor((1 - $minPriceVol / $priceVol) * 100);
+                if ($violatingProduct === null || $maxVol < $violatingProduct['max']) {
+                    $violatingProduct = ['name' => 'قیمت هر گیگابایت', 'max' => $maxVol];
+                }
+            }
+        }
+        if ($priceTime > 0 && $minPriceTime > 0) {
+            $effectiveTime = $priceTime - ($priceTime * $discount / 100);
+            if ($effectiveTime < $minPriceTime) {
+                $maxTime = floor((1 - $minPriceTime / $priceTime) * 100);
+                if ($violatingProduct === null || $maxTime < $violatingProduct['max']) {
+                    $violatingProduct = ['name' => 'قیمت هر روز', 'max' => $maxTime];
+                }
+            }
+        }
+        if ($violatingProduct !== null) {
+            sendmessage($from_id, "❌ این درصد تخفیف باعث می‌شود قیمت نهایی از حداقل قیمت پایه کمتر شود.\n\n({$violatingProduct['name']})\nحداکثر درصد تخفیف مجاز: <b>{$violatingProduct['max']}%</b>", $backadmin, 'HTML');
+            return;
+        }
+    }
+    update("user", "pricediscount", $discount, "id", $id_user);
+    sendmessage($from_id, "✅ درصد تخفیف کاربر به <b>{$discount}%</b> تنظیم شد.", $keyboardadmin, 'HTML');
+    step('home', $from_id);
+
+} elseif (preg_match('/resellervieworders_(\w+)/', $datain, $dataget)) {
+    $id_user = $dataget[1];
+    $targetuser = select("user", "*", "id", $id_user, "select");
+    if (!$targetuser || $targetuser['bottype'] !== $ApiToken) return;
+    update("user", "pagenumber", "1", "id", $from_id);
+    $page = 1;
+    $items_per_page = 10;
+    $start_index = 0;
+    $stmt = $pdo->prepare("SELECT * FROM invoice WHERE id_user = :uid AND bottype = :bottype ORDER BY time_sell DESC LIMIT $start_index, $items_per_page");
+    $stmt->execute([':uid' => $id_user, ':bottype' => $ApiToken]);
+    $keyboardlists = ['inline_keyboard' => []];
+    $keyboardlists['inline_keyboard'][] = [
+        ['text' => "عملیات", 'callback_data' => "none"],
+        ['text' => "وضعیت", 'callback_data' => "none"],
+        ['text' => "نام کاربری", 'callback_data' => "none"],
+    ];
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $keyboardlists['inline_keyboard'][] = [
+            ['text' => "مشاهده", 'callback_data' => "manageinvoicereseller_" . $row['id_invoice']],
+            ['text' => $row['Status'], 'callback_data' => "none"],
+            ['text' => $row['username'], 'callback_data' => "none"],
+        ];
+    }
+    $keyboardlists['inline_keyboard'][] = [
+        ['text' => "⬅️ قبلی", 'callback_data' => "resellerordersprev_{$id_user}"],
+        ['text' => "➡️ بعدی", 'callback_data' => "resellernext_{$id_user}"],
+    ];
+    update("user", "Processing_value", $id_user, "id", $from_id);
+    sendmessage($from_id, "📦 سفارشات کاربر <a href=\"tg://user?id=$id_user\">$id_user</a>:", json_encode($keyboardlists), 'HTML');
+
+} elseif (preg_match('/resellernext_(\w+)/', $datain, $dataget)) {
+    $id_user = $dataget[1];
+    $page = intval($user['pagenumber']) + 1;
+    update("user", "pagenumber", $page, "id", $from_id);
+    $items_per_page = 10;
+    $start_index = ($page - 1) * $items_per_page;
+    $stmt = $pdo->prepare("SELECT * FROM invoice WHERE id_user = :uid AND bottype = :bottype ORDER BY time_sell DESC LIMIT $start_index, $items_per_page");
+    $stmt->execute([':uid' => $id_user, ':bottype' => $ApiToken]);
+    if ($stmt->rowCount() == 0) {
+        sendmessage($from_id, "❌ صفحه بیشتری وجود ندارد.", null, 'HTML');
+        return;
+    }
+    $keyboardlists = ['inline_keyboard' => []];
+    $keyboardlists['inline_keyboard'][] = [
+        ['text' => "عملیات", 'callback_data' => "none"],
+        ['text' => "وضعیت", 'callback_data' => "none"],
+        ['text' => "نام کاربری", 'callback_data' => "none"],
+    ];
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $keyboardlists['inline_keyboard'][] = [
+            ['text' => "مشاهده", 'callback_data' => "manageinvoicereseller_" . $row['id_invoice']],
+            ['text' => $row['Status'], 'callback_data' => "none"],
+            ['text' => $row['username'], 'callback_data' => "none"],
+        ];
+    }
+    $keyboardlists['inline_keyboard'][] = [
+        ['text' => "⬅️ قبلی", 'callback_data' => "resellerordersprev_{$id_user}"],
+        ['text' => "➡️ بعدی", 'callback_data' => "resellernext_{$id_user}"],
+    ];
+    Editmessagetext($from_id, $message_id, "📦 سفارشات کاربر (صفحه $page):", json_encode($keyboardlists));
+
+} elseif (preg_match('/resellerordersprev_(\w+)/', $datain, $dataget)) {
+    $id_user = $dataget[1];
+    $page = max(1, intval($user['pagenumber']) - 1);
+    update("user", "pagenumber", $page, "id", $from_id);
+    $items_per_page = 10;
+    $start_index = ($page - 1) * $items_per_page;
+    $stmt = $pdo->prepare("SELECT * FROM invoice WHERE id_user = :uid AND bottype = :bottype ORDER BY time_sell DESC LIMIT $start_index, $items_per_page");
+    $stmt->execute([':uid' => $id_user, ':bottype' => $ApiToken]);
+    $keyboardlists = ['inline_keyboard' => []];
+    $keyboardlists['inline_keyboard'][] = [
+        ['text' => "عملیات", 'callback_data' => "none"],
+        ['text' => "وضعیت", 'callback_data' => "none"],
+        ['text' => "نام کاربری", 'callback_data' => "none"],
+    ];
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $keyboardlists['inline_keyboard'][] = [
+            ['text' => "مشاهده", 'callback_data' => "manageinvoicereseller_" . $row['id_invoice']],
+            ['text' => $row['Status'], 'callback_data' => "none"],
+            ['text' => $row['username'], 'callback_data' => "none"],
+        ];
+    }
+    $keyboardlists['inline_keyboard'][] = [
+        ['text' => "⬅️ قبلی", 'callback_data' => "resellerordersprev_{$id_user}"],
+        ['text' => "➡️ بعدی", 'callback_data' => "resellernext_{$id_user}"],
+    ];
+    Editmessagetext($from_id, $message_id, "📦 سفارشات کاربر (صفحه $page):", json_encode($keyboardlists));
 } elseif ($text == "💰 تنظیم قیمت محصول") {
     if (!is_file('product.json')) {
         file_put_contents('product.json', "{}");
