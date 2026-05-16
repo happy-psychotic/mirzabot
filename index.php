@@ -402,44 +402,19 @@ if (preg_match('~^(?:vless|vmess|ss|trojan)://[^\s]+#(\S+)~i', trim($text), $cfg
     $cfgFragment = urldecode($cfgMatch[1]);
     $cfgUsername = explode('-', $cfgFragment)[0];
     if ($cfgUsername !== '') {
-        if ($user['step'] == "getuseragnetservice") {
-            // During service search, treat config links as search input instead of volume-only lookup.
-            $text = $cfgUsername;
-        } else {
         $stmtCfgOwn = $pdo->prepare("SELECT id_invoice FROM invoice WHERE username = :u AND id_user = :uid LIMIT 1");
         $stmtCfgOwn->execute([':u' => $cfgUsername, ':uid' => $from_id]);
         $cfgOwnRow = $stmtCfgOwn->fetch(PDO::FETCH_ASSOC);
         if ($cfgOwnRow) {
-            // Own config — route to product_ handler; reset step so no other handler intercepts
+            // Own config — route to product_ handler
             $datain = "product_" . $cfgOwnRow['id_invoice'];
             $text   = "x";
             step('home', $from_id);
             $user['step'] = 'home';
         } else {
-            // Not owner — show volume info only and stop
-            $stmtCfgAny = $pdo->prepare("SELECT Service_location, username FROM invoice WHERE username = :u LIMIT 1");
-            $stmtCfgAny->execute([':u' => $cfgUsername]);
-            $cfgAnyRow = $stmtCfgAny->fetch(PDO::FETCH_ASSOC);
-            if (!$cfgAnyRow) {
-                sendmessage($from_id, "❌ سرویسی با این نام کاربری یافت نشد.", null, 'HTML');
-            } else {
-                $DataUserCfg = $ManagePanel->DataUser($cfgAnyRow['Service_location'], $cfgAnyRow['username']);
-                if (!isset($DataUserCfg['data_limit']) && !isset($DataUserCfg['used_traffic'])) {
-                    sendmessage($from_id, "❌ اطلاعات سرویس قابل دریافت نیست.", null, 'HTML');
-                } else {
-                    $cfgTotal  = isset($DataUserCfg['data_limit'])   && $DataUserCfg['data_limit']   ? round($DataUserCfg['data_limit']   / (1024 ** 3), 2) : null;
-                    $cfgUsed   = isset($DataUserCfg['used_traffic'])  && $DataUserCfg['used_traffic']  ? round($DataUserCfg['used_traffic']  / (1024 ** 3), 2) : 0;
-                    $cfgRemain = $cfgTotal !== null ? max(0, round($cfgTotal - $cfgUsed, 2)) : null;
-                    sendmessage($from_id,
-                        "📊 اطلاعات حجم کانفیگ:\n\n" .
-                        "📦 کل حجم: <b>" . ($cfgTotal  !== null ? "{$cfgTotal} گیگ"  : "نامحدود") . "</b>\n" .
-                        "🔻 مصرف شده: <b>{$cfgUsed} گیگ</b>\n" .
-                        "✅ باقی‌مانده: <b>" . ($cfgRemain !== null ? "{$cfgRemain} گیگ" : "نامحدود") . "</b>",
-                        null, 'HTML');
-                }
-            }
-            return;
-        }
+            // Not owner — route to full admin service search flow
+            $text = $cfgUsername;
+            $user['step'] = 'GetusernameconfigAndOrdedrs';
         }
     }
 }
