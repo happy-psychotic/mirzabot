@@ -1313,7 +1313,7 @@ $textonebuy
     Editmessagetext($from_id, $message_id, $text_bot_var['text_account']['add_balance'], $bakinfos);
     step("get_price", $from_id);
 } elseif ($user['step'] == "get_price") {
-    if (!ctype_digit($text)) {
+    if (!ctype_digit($text) || intval($text) <= 0) {
         sendmessage($from_id, $textbotlang['Admin']['agent']['invalidvlue'], $backuser, 'HTML');
         return;
     }

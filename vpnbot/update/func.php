@@ -63,7 +63,8 @@ function DirectPaymentbot($order_id,$image = 'images.jpg'){
     $Payment_report = select("Payment_report", "*", "id_order", $order_id,"select");
     $format_price_cart = number_format($Payment_report['price']);
     $Balance_id = select("user", "*", "id", $Payment_report['id_user'],"select");
-    $Balance_id['Balance'] = json_decode(file_get_contents("data/{$Payment_report['id_user']}/{$Payment_report['id_user']}.json"),true)['Balance'];
+    $userBalanceRaw = file_get_contents("data/{$Payment_report['id_user']}/{$Payment_report['id_user']}.json");
+    $Balance_id['Balance'] = is_string($userBalanceRaw) ? (json_decode($userBalanceRaw, true)['Balance'] ?? 0) : 0;
     update("user","Processing_value","0", "id",$Balance_id['id']);
     update("user","Processing_value_one","0", "id",$Balance_id['id']);
     update("user","Processing_value_tow","0", "id",$Balance_id['id']);
@@ -231,7 +232,9 @@ function DirectPaymentbot($order_id,$image = 'images.jpg'){
         return;
     }
         $Balance_confrim = intval($Balance_id['Balance']) + intval($Payment_report['price']);
-        $userbalance = json_decode(file_get_contents("data/{$Payment_report['id_user']}/{$Payment_report['id_user']}.json"),true);
+        $userBalanceRaw2 = file_get_contents("data/{$Payment_report['id_user']}/{$Payment_report['id_user']}.json");
+        $userbalance = is_string($userBalanceRaw2) ? json_decode($userBalanceRaw2, true) : [];
+        if (!is_array($userbalance)) $userbalance = [];
         $userbalance['Balance'] = $Balance_confrim;
         file_put_contents("data/{$Payment_report['id_user']}/{$Payment_report['id_user']}.json",json_encode($userbalance));
         update("Payment_report","payment_Status","paid","id_order",$Payment_report['id_order']);
